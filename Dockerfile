@@ -4,30 +4,29 @@ FROM ubuntu:latest
 RUN dpkg --add-architecture i386
 # Install necessary tools and dependencies
 RUN apt-get update && \
-    apt-get install -y python3:i386 python3-dev:i386 python3-pip wine32 xvfb
+    apt-get install -y wine wine32 xorg xvfb xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic
 # cleanup after installs
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Set the working directory inside the container
 WORKDIR /app
+ENV WINEARCH="win32"
 
 # Copy the required files into the container
-# Assuming you have these files in the same directory as the Dockerfile
-COPY pactest.py /app/
-COPY winhttp.dll /app/
 COPY requirements.txt /app/
-COPY example.pac /app/
+COPY install_python.sh /app/
 COPY assets/python-3.12.8.exe /app/
 
-RUN pip3 install --break-system-packages pyinstaller -r requirements.txt
+# prep python inside wine
+RUN ./install_python.sh
 
-# Generate the Python executable using PyInstaller
-RUN pyinstaller --onefile pactest.py --distpath /app/dist
-
-# prep wine
-RUN xvfb-run wine msiexec /i python-3.12.8.exe /L*v log.txt
-RUN xvfb-run wine python.exe Scripts/pip.exe install -r requirements.txt
+COPY pactest.py /app/
+#COPY winhttp.dll /app/
+COPY example.pac /app/
+COPY entrypoint.sh /app/
+EXPOSE 8080
 
 # Set Wine as the Windows interpreter and run the Python script
-CMD ["wine", "python.exe", "pactest.py", "example.pac", "google.com"]
+CMD ["./entrypoint.sh"]
+#CMD ["xvfb-run", "wine", "python.exe", "pactest.py", "example.pac", "google.com"]

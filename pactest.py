@@ -40,7 +40,7 @@ def serve_up():
 
 
 def start_webserver():
-    app.run(port=8080, debug=False, use_reloader=False)
+    app.run(port=8080, debug=True, use_reloader=False)
 
 
 def wait_for_server(url, timeout=10):
