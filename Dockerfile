@@ -1,19 +1,11 @@
-# Use a lightweight Linux base image like Ubuntu
 FROM ubuntu:latest
-
-# Metadata
-LABEL authors="tkuts"
 
 # Enable Multiarch
 RUN dpkg --add-architecture i386
 # Install necessary tools and dependencies
 RUN apt-get update && \
-    apt-get install -y wine:i386 libwine:i386 unzip libsm6:i386
-# Install Xvfb and other necessary tools
-RUN apt-get install -y xvfb x11-utils x11vnc
-RUN apt-get install -y winetricks
-RUN apt-get install -y software-properties-common gnupg2 winbind
-# Clean up after installation
+    apt-get install -y python3:i386 python3-dev:i386 python3-pip wine32 xvfb
+# cleanup after installs
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -24,20 +16,18 @@ WORKDIR /app
 # Assuming you have these files in the same directory as the Dockerfile
 COPY pactest.py /app/
 COPY winhttp.dll /app/
+COPY requirements.txt /app/
 COPY example.pac /app/
-COPY entrypoint.sh /app/
-COPY assets/python-3.12.4-embed-win32.zip /app/
+COPY assets/python-3.12.8.exe /app/
 
-ENV WINEDEBUG=fixme-all
-ENV WINEARCH=win32
-RUN winetricks msxml6
-RUN winetricks -q win10
-#RUN Xvfb :0 -screen 0 1024x768x16 & DISPLAY=:0.0 winetricks vcrun2015
+RUN pip3 install --break-system-packages pyinstaller -r requirements.txt
 
-# Extract the Python embedded package inside the container
-RUN unzip python-3.12.4-embed-win32.zip -d python && rm python-3.12.4-embed-win32.zip
+# Generate the Python executable using PyInstaller
+RUN pyinstaller --onefile pactest.py --distpath /app/dist
 
-#RUN Xvfb :0 -screen 0 1024x768x16 & DISPLAY=:0.0 wine pip /app/python/python.exe -m pip install -r requirements.txt
+# prep wine
+RUN xvfb-run wine msiexec /i python-3.12.8.exe /L*v log.txt
+RUN xvfb-run wine python.exe Scripts/pip.exe install -r requirements.txt
 
 # Set Wine as the Windows interpreter and run the Python script
-CMD ["sh", "./entrypoint.sh"]
+CMD ["wine", "python.exe", "pactest.py", "example.pac", "google.com"]
