@@ -40,7 +40,7 @@ def serve_up():
 
 
 def start_webserver():
-    app.run(port=8080, debug=True, use_reloader=False)
+    app.run(host="0.0.0.0", port=8080, debug=False, use_reloader=False)
 
 
 def wait_for_server(url, timeout=10):
@@ -313,6 +313,7 @@ if __name__ == "__main__":
 
     # wait for flask to start
     wait_for_server("http://127.0.0.1:8080/up")
+    time.sleep(30)
 
     try:
         proxy = resolve_proxy_with_pac(destination_url, pac_url)

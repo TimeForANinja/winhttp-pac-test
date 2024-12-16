@@ -1,10 +1,14 @@
 FROM ubuntu:latest
 
+LABEL authors=timeforaninja
+
 # Enable Multiarch
 RUN dpkg --add-architecture i386
 # Install necessary tools and dependencies
 RUN apt-get update && \
-    apt-get install -y wine wine32 xorg xvfb xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic
+    apt-get install -y wine wine32 xorg xvfb x11-utils xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic
+# TODO: remove when done debugging
+RUN apt-get install -y curl
 # cleanup after installs
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -22,7 +26,7 @@ COPY assets/python-3.12.8.exe /app/
 RUN ./install_python.sh
 
 COPY pactest.py /app/
-#COPY winhttp.dll /app/
+COPY winhttp.dll /app/
 COPY example.pac /app/
 COPY entrypoint.sh /app/
 EXPOSE 8080
