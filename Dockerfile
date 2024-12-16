@@ -12,6 +12,7 @@ RUN apt-get update && \
 # Install Xvfb and other necessary tools
 RUN apt-get install -y xvfb x11-utils x11vnc
 RUN apt-get install -y winetricks
+RUN apt-get install -y software-properties-common gnupg2 winbind
 # Clean up after installation
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -27,6 +28,9 @@ COPY example.pac /app/
 COPY entrypoint.sh /app/
 COPY assets/python-3.12.4-embed-win32.zip /app/
 
+ENV WINEDEBUG=fixme-all
+ENV WINEARCH=win32
+RUN winetricks msxml6
 RUN winetricks -q win10
 #RUN Xvfb :0 -screen 0 1024x768x16 & DISPLAY=:0.0 winetricks vcrun2015
 
