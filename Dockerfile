@@ -2,34 +2,52 @@ FROM ubuntu:latest
 
 LABEL authors=timeforaninja
 
-# Enable Multiarch
+# Enable Multiarch, since winhttp requires x32 architecture
 RUN dpkg --add-architecture i386
-# Install necessary tools and dependencies
+# tune wine (enable 32bit mode & enforce wine directory)
+ENV WINEARCH="win32"
+ENV WINEPREFIX=/app/.wine/
+
+# Install necessary (generic) tools and dependencies
 RUN apt-get update
-RUN apt-get install -y wine wine32
-RUN apt-get install -y xorg xvfb x11-utils xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic
-# cleanup after installs, to reduce docker size
+RUN apt-get install -y curl sudo python3 python3-pip python3-venv
+# Dependencies for winhttp - wine 32bit and xvfb as fake display
+RUN apt-get install -y wine32 \
+    xorg xvfb x11-utils xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic
+# Dependencies for v8 - nodejs
+RUN curl -sL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+RUN apt-get install -y nodejs
+
+# cleanup after installs; reduces docker size
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Set the working directory inside the container
 WORKDIR /app
-# winhttp requires x32 architecture, so configure wine accordingly
-ENV WINEARCH="win32"
 
-# Copy the required files for python into the container
+# Copy the required files for installation(s) into the container
+COPY engines/ /app/engines/
 COPY requirements.txt /app/
-COPY install_python.sh /app/
-COPY assets/python-3.12.8.exe /app/
 
-# prep python inside wine
-RUN ./install_python.sh
+# prep v8 - install nodejs dependencies
+RUN cd /app/engines/v8 && npm install
+# prep winhttp - install python
+# yes, the sleep at the end is essential...
+RUN xvfb-run wine engines/winhttp/python-3.12.8.exe /quiet PrependPath=1 InstallAllUsers=1 && sleep 10
+# prep core server - install python dependencies
+RUN python3 -m venv venv && \
+    . venv/bin/activate && \
+    python3 -m pip install --break-system-packages -r requirements.txt
 
-# Copy the required files for execution into the container
-COPY pactest.py /app/
-COPY winhttp.dll /app/
-COPY example.pac /app/
+# Define health check using the script
+COPY healthcheck.sh /app/healthcheck.sh
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 CMD /app/healthcheck.sh
+
+
+# Copy missing runtime files
 COPY entrypoint.sh /app/
+COPY server.py /app/
+
 
 # Run the entrypoint which starts the python server using wine
 EXPOSE 8080

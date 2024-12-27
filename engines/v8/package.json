@@ -1,0 +1,6 @@
+{
+  "main": "v8.js",
+  "scripts": {
+    "start": "node v8.js"
+  }
+}
