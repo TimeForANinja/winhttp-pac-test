@@ -1,36 +1,11 @@
-import requests
 from flask import Flask, jsonify, request
-import uuid
 from flasgger import Swagger
+
+import actions
+import types
 
 app = Flask(__name__)
 swagger = Swagger(app)
-
-# In-memory storage for PAC files
-class PAC:
-    def __init__(self, id, content, added_time):
-        self.id = id
-        self.content = content
-        self.added_time = added_time
-
-    def simple(self):
-        return {
-            "id": self.id,
-            "added_time": self.added_time
-        }
-    def full(self):
-        return {
-            "id": self.id,
-            "content": self.content,
-            "added_time": self.added_time
-        }
-pac_store = {}
-
-# Map of known "pac-engines"
-engines = {
-    "v8": "http://localhost:8081/",
-    "winhttp": "http://localhost:8082/"
-}
 
 @app.route('/api/v1/pac', methods=['GET'])
 def list_all_pacs():
@@ -44,7 +19,7 @@ def list_all_pacs():
         description: A JSON object containing all the PAC IDs and their content
     """
     return jsonify({
-        "pacs": [pac.simple() for pac in pac_store.values()]
+        "pacs": actions.list_pac()
     }), 200
 
 
@@ -67,10 +42,10 @@ def get_pac(uid):
       404:
         description: PAC not found
     """
-    if uid in pac_store:
-        return pac_store[uid].full(), 200
-    else:
+    if not actions.has_pac(uid):
         return jsonify({"error": "PAC not found"}), 404
+
+    return actions.get_pac(uid).full(), 200
 
 
 @app.route('/api/v1/pac', methods=['POST'])
@@ -98,18 +73,15 @@ def add_pac():
       400:
         description: Required field missing or conflict
     """
-    data = request.json
-    uid = str(uuid.uuid4())
-    content = data.get("content")
+    content = request.json.get("content")
 
     if not content:
         return jsonify({"error": "The 'content' field is required"}), 400
 
-    if uid in pac_store:
-        return jsonify({"error": "PAC with this UID already exists"}), 400
+    pac = types.PAC.new_pac(content)
 
-    pac_store[uid] = content
-    return jsonify({"message": "PAC added successfully", "uid": uid}), 201
+    actions.add_pac(pac)
+    return jsonify({"message": "PAC added successfully", "uid": pac.id}), 201
 
 
 @app.route('/api/v1/eval', methods=['POST'])
@@ -147,69 +119,76 @@ def evaluate_function():
       404:
         description: PAC file does not exist
     """
-    data = request.json
+    req_data = request.json
+    content = req_data.get("content")
 
-    # Parse the required fields
-    dest_host = data.get("dest_host")
-    src_ip = data.get("src_ip")
-    pac_file = data.get("pac_file")
+    if not content:
+        return jsonify({"error": "The 'content' field is required"}), 400
 
-    # Validate required fields
-    if not dest_host or not src_ip or not pac_file:
-        return jsonify({"error": "Fields 'dest_host', 'src_ip', and 'pac_file' are required"}), 400
+    pac = types.PAC.new_pac(content)
+    actions.add_pac(pac)
 
-    # Check if the PAC file exists
-    if pac_file not in pac_store:
-        return jsonify({"error": f"The PAC file '{pac_file}' does not exist"}), 404
+    return eval(pac, req_data)
 
-    # Simulate selecting an engine (you can customize how the engine is chosen)
-    engine = engines["v8"]  # Default to v8 for now
 
-    # Construct the response
-    response = {
-        "dest_host": dest_host,
-        "src_ip": src_ip,
-        "pac_file": pac_file,
-        "pac_content": pac_store[pac_file].content,
-        "engine": engine
-    }
+@app.route('/api/v1/eval/<uid>', methods=['POST'])
+def evaluate_by_uid(uid):
+    """
+    ---
+    tags:
+      - PAC
+    summary: Evaluate a PAC file by its UID, using the provided input
+    parameters:
+      - name: uid
+        in: path
+        required: true
+        type: string
+        description: Unique identifier of the PAC file
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            dest_host:
+              type: string
+              description: The destination host for evaluation
+            src_ip:
+              type: string
+              description: The source IP making the request
+          required:
+            - dest_host
+            - src_ip
+    responses:
+      200:
+        description: Evaluation completed successfully
+      400:
+        description: Missing required fields
+      404:
+        description: PAC file does not exist
+    """
+    if not actions.has_pac(uid):
+        return jsonify({"error": f"The PAC file '{uid}' does not exist"}), 404
+    pac = actions.get_pac(uid)
 
-    # Placeholder logic (calling the engine can be implemented later)
-    eval_results = {}
+    # Parse and validate the required fields
+    req_data = request.json
 
-    # Iterate over all engines and send POST requests
-    for engine_name, engine_url in engines.items():
-        try:
-            # Prepare the payload for the REST call
-            payload = {
-                "dest_url": dest_host,
-                "src_ip": src_ip,
-                "pac_url": f"http://127.0.0.1:8080/pac/{pac_file}",
-            }
-            # Make the REST request
-            res = requests.post(engine_url, json=payload, timeout=5)
+    return eval(pac, req_data)
 
-            # Add the response to eval results based on status
-            if res.status_code == 200:
-                eval_results[engine_name] = res.json()
-            else:
-                try:
-                    eval_results[engine_name] = res.json()
-                except ValueError:
-                    eval_results[engine_name] = {
-                        "status": "failed",
-                        "message": f"Engine responded with status {res.status_code}, and response is not a JSON",
-                        "error": res.text,
-                        "error_code": res.status_code
-                    }
-        except requests.exceptions.Timeout:
-            eval_results[engine_name] = {"error": "Request to engine timed out"}
-        except requests.exceptions.RequestException as e:
-            eval_results[engine_name] = {"error": str(e)}
 
-    response["eval"] = eval_results
+def eval(pac, req_body):
+    dest_host = req_body.get("dest_host")
+    src_ip = req_body.get("src_ip")
 
-    return jsonify({"message": "Evaluation completed", "details": response}), 200
+    if not dest_host or not src_ip:
+        return jsonify({"error": "Fields 'dest_host' and 'src_ip' are required"}), 400
+
+    eval_data = types.EvalData(pac, dest_host, src_ip)
+    result = actions.eval_pac(eval_data)
+
+    return jsonify(result.full()), 200
+
 
 @app.route('/pac/<uid>', methods=['GET'])
 def get_pac_alternate(uid):
@@ -243,10 +222,10 @@ def get_pac_alternate(uid):
                   type: string
                   example: "PAC not found"
     """
-    if uid in pac_store:
-        return pac_store[uid], 200, {'Content-Type': 'application/x-ns-proxy-autoconfig'}
-    else:
+    if not actions.has_pac(uid):
         return jsonify({"error": "PAC not found"}), 404
+
+    return actions.get_pac(uid).content, 200, {'Content-Type': 'application/x-ns-proxy-autoconfig'}
 
 
 if __name__ == '__main__':
