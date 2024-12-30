@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from error_parser import parseWinHTTPError
 import json
+import threading
 
 # Constants for WinHTTP API
 WINHTTP_ACCESS_TYPE_NO_PROXY = 1
@@ -32,10 +33,10 @@ class ProxyHandlerServer(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/up":
             # Respond to /up route with JSON
-            self.send_json_response({"status": 200, "message": "Server is up and running!"}, 200)
+            self.send_json_response({"status": 'success', "message": "Server is up and running!"}, 200)
         else:
             # Default response for GET
-            self.send_json_response({"error": "Not Found"}, 404)
+            self.send_json_response({"status": "failed", "error": "Not Found"}, 404)
 
     def do_POST(self):
         # Parse JSON payload
@@ -44,7 +45,7 @@ class ProxyHandlerServer(BaseHTTPRequestHandler):
         try:
             data = json.loads(post_data)
         except json.JSONDecodeError:
-            self.send_json_response({"error": "Request must be JSON"}, 400)
+            self.send_json_response({'status': 'failed',"error": "Request must be a valid JSON"}, 400)
             return
 
         # Validate input
@@ -52,27 +53,27 @@ class ProxyHandlerServer(BaseHTTPRequestHandler):
         dest_url = data.get("dest_url")
 
         if not pac_url:
-            self.send_json_response({"error": "Field 'pac_url' is required"}, 400)
+            self.send_json_response({'status': 'failed',"error": "Field 'pac_url' is required"}, 400)
             return
 
         if not dest_url:
-            self.send_json_response({"error": "Field 'dest_url' is required"}, 400)
+            self.send_json_response({'status': 'failed',"error": "Field 'dest_url' is required"}, 400)
             return
 
         # Validate the format of URLs
         if not ProxyHandlerServer.validate_url(pac_url):
-            self.send_json_response({"error": "'pac_url' must be a valid URL"}, 400)
+            self.send_json_response({'status': 'failed',"error": "'pac_url' must be a valid URL"}, 400)
             return
 
         if not ProxyHandlerServer.validate_url(dest_url):
-            self.send_json_response({"error": "'dest_url' must be a valid URL"}, 400)
+            self.send_json_response({'status': 'failed',"error": "'dest_url' must be a valid URL"}, 400)
             return
 
         try:
             eval = resolve_proxy_with_pac(dest_url, pac_url)
             self.send_json_response(eval, 200)
         except Exception as e:
-            self.send_json_response({"message": "Input validation failed", "error": str(e)}, 500)
+            self.send_json_response({'status': 'failed',"error": "Unexpexted Error during evaluation", "message": str(e)}, 500)
 
     @staticmethod
     def validate_url(url):
@@ -111,69 +112,67 @@ class WINHTTP_PROXY_INFO(ctypes.Structure):
         ("lpszProxyBypass", ctypes.wintypes.LPCWSTR)
     ]
 
-
-def resolve_proxy_with_pac(destination_url, pac_url):
+def resolve_proxy_with_pac(destination_url, pac_url) -> dict:
     """Uses WinHTTP to resolve the proxy for the given URL using the PAC file."""
-    winhttp = ctypes.windll.LoadLibrary(".\\winhttp.dll")
+    with threading.Lock():
+        winhttp = ctypes.windllx.LoadLibrary(".\\winhttp.dll")
+        print("destination_url", destination_url, "pac_url", pac_url)
+        print("Platform", "supported" if winhttp.WinHttpCheckPlatform() else "unsupported")
 
-    print("destination_url", destination_url, "pac_url", pac_url)
-    print("Platform", "supported" if winhttp.WinHttpCheckPlatform() else "unsupported")
-
-    # Initialize WinHTTP session
-    hSession = winhttp.WinHttpOpen(
-        ctypes.c_wchar_p("PacTest"),  # user agent string
-        WINHTTP_ACCESS_TYPE_NO_PROXY,
-        WINHTTP_NO_PROXY_NAME,
-        WINHTTP_NO_PROXY_BYPASS,
-        WINHTTP_FLAG_ASYNC,
-    )
-    print("Session created", hSession)
-    if not hSession:
-        return parseWinHTTPError("WinHttpOpen", ctypes.GetLastError())
-
-    # force clear cache
-    result = winhttp.WinHttpResetAutoProxy(
-        hSession,
-        WINHTTP_RESET_NOTIFY_NETWORK_CHANGED | WINHTTP_RESET_OUT_OF_PROC | WINHTTP_RESET_ALL,
-    )
-    print("Clearing Cache", "successfull" if result==0 else f"failed with code {result}")
-
-    try:
-        auto_proxy_options = WINHTTP_AUTOPROXY_OPTIONS()
-        auto_proxy_options.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL
-        auto_proxy_options.dwAutoDetectFlags = 0
-        auto_proxy_options.fAutoLogonIfChallenged = False
-        auto_proxy_options.lpszAutoConfigUrl = ctypes.wintypes.LPCWSTR(pac_url)
-
-        proxy_info = WINHTTP_PROXY_INFO()
-
-        # Call WinHttpGetProxyForUrl
-        result = winhttp.WinHttpGetProxyForUrl(
-            hSession,
-            ctypes.wintypes.LPCWSTR(destination_url),
-            ctypes.byref(auto_proxy_options),
-            ctypes.byref(proxy_info),
+        # Initialize WinHTTP session
+        hSession = winhttp.WinHttpOpen(
+            ctypes.c_wchar_p("PacTest"),  # user agent string
+            WINHTTP_ACCESS_TYPE_NO_PROXY,
+            WINHTTP_NO_PROXY_NAME,
+            WINHTTP_NO_PROXY_BYPASS,
+            WINHTTP_FLAG_ASYNC,
         )
+        print("Session created", hSession)
+        if not hSession:
+            return parseWinHTTPError("WinHttpOpen", ctypes.GetLastError())
 
-        if not result:
-            return parseWinHTTPError("WinHttpGetProxyForUrl", ctypes.GetLastError())
+        # force clear cache
+        result = winhttp.WinHttpResetAutoProxy(
+            hSession,
+            WINHTTP_RESET_NOTIFY_NETWORK_CHANGED | WINHTTP_RESET_OUT_OF_PROC | WINHTTP_RESET_ALL,
+        )
+        print("Clearing Cache", "successfull" if result==0 else f"failed with code {result}")
 
-        # Extract the proxy string from proxy_info
-        proxy = proxy_info.lpszProxy if proxy_info.lpszProxy else "<no proxy>"
-        return {
-            'status': 'success',
-            'proxy': proxy,
-        }
+        try:
+            auto_proxy_options = WINHTTP_AUTOPROXY_OPTIONS()
+            auto_proxy_options.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL
+            auto_proxy_options.dwAutoDetectFlags = 0
+            auto_proxy_options.fAutoLogonIfChallenged = False
+            auto_proxy_options.lpszAutoConfigUrl = ctypes.wintypes.LPCWSTR(pac_url)
 
-    finally:
-        # Properly close the WinHTTP session handle
-        winhttp.WinHttpCloseHandle(hSession)
+            proxy_info = WINHTTP_PROXY_INFO()
+
+            # Call WinHttpGetProxyForUrl
+            result = winhttp.WinHttpGetProxyForUrl(
+                hSession,
+                ctypes.wintypes.LPCWSTR(destination_url),
+                ctypes.byref(auto_proxy_options),
+                ctypes.byref(proxy_info),
+            )
+
+            if not result:
+                return parseWinHTTPError("WinHttpGetProxyForUrl", ctypes.GetLastError())
+
+            # Extract the proxy string from proxy_info
+            proxy = proxy_info.lpszProxy if proxy_info.lpszProxy else "<no proxy>"
+            return {
+                'status': 'success',
+                'proxy': proxy,
+            }
+
+        finally:
+            # Properly close the WinHTTP session handle
+            winhttp.WinHttpCloseHandle(hSession)
 
 
 class InvalidArchitectureError(Exception):
     """Custom exception for invalid Python architecture."""
     pass
-
 
     @staticmethod
     def is_python_32bit():
