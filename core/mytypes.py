@@ -28,7 +28,6 @@ class PAC:
             "added_time": self.added_time
         }
 
-
 class EvalData:
     def __init__(self, pac: PAC, dest_url: str, src_ip: str):
         self.pac = pac

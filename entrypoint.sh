@@ -31,7 +31,7 @@ done
 # Start the core python server.py script
 # And add the process ID to the list
 echo "Starting core python server.py..."
-. venv/bin/activate && python3 server.py &
+. venv/bin/activate && cd core && python3 server.py &
 PIDS+=($!)
 
 # Trap script termination to clean up all running processes

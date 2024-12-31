@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "eslint": "^9.17.0"
+  },
+  "main": "eslint.js",
+  "scripts": {
+    "start": "node eslint.js"
+  }
+}

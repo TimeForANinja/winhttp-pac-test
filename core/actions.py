@@ -1,20 +1,28 @@
 import requests
-import types
-from types import EvalResponse
+import collections
 
-pac_store = {}
+import .mytypes
 
-def has_pac(uid) -> bool:
-    return uid in pac_store
+pac_store = collections.deque(maxlen=100)
 
-def get_pac(uid) -> types.PAC:
-    return pac_store[uid]
+def has_pac(uid: str) -> bool:
+    return any(pac.id == uid for pac in pac_store)
 
-def add_pac(pac):
-    pac_store[pac.id] = pac
+def get_pac(uid: str) -> mytypes.PAC:
+    for pac in pac_store:
+        if pac.id == uid:
+            return pac
+    raise KeyError(f"PAC with UID {uid} not found")
+
+def add_pac(pac: mytypes.PAC):
+    for existing in pac_store:
+        if existing.id == pac.id:
+            pac_store.remove(existing)
+            break
+    pac_store.append(pac)
 
 def list_pac() -> list[dict]:
-    return [pac.simple() for pac in pac_store.values()]
+    return [pac.simple() for pac in pac_store]
 
 
 # Map of known "pac-engines"
@@ -23,8 +31,8 @@ engines = {
     "winhttp": "http://localhost:8082/"
 }
 
-def eval_pac(data: types.EvalData) -> types.EvalResponse:
-    eval_resp = EvalResponse(data)
+def eval_pac(data: mytypes.EvalData) -> mytypes.EvalResponse:
+    eval_resp = mytypes.EvalResponse(data)
 
     for engine_name, engine_url in engines.items():
         try:

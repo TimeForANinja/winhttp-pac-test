@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Starting nodejs engine..."
+echo "Starting v8 engine..."
 
 npm start &
 PID=$!

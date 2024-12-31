@@ -27,27 +27,26 @@ WORKDIR /app
 
 # Copy the required files for installation(s) into the container
 COPY engines/ /app/engines/
-COPY requirements.txt /app/
+COPY core /app/core/
 
 # prep v8 - install nodejs dependencies
 RUN cd /app/engines/v8 && npm install
+# prep eslint - install nodejs dependencies
+RUN cd /app/engines/eslint && npm install
 # prep winhttp - install python
 # yes, the sleep at the end is essential...
 RUN xvfb-run wine engines/winhttp/python-3.12.8.exe /quiet PrependPath=1 InstallAllUsers=1 && sleep 10
 # prep core server - install python dependencies
 RUN python3 -m venv venv && \
     . venv/bin/activate && \
-    python3 -m pip install --break-system-packages -r requirements.txt
+    python3 -m pip install --break-system-packages -r core/requirements.txt
 
 # Define health check using the script
 COPY healthcheck.sh /app/healthcheck.sh
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 CMD /app/healthcheck.sh
 
-
 # Copy missing runtime files
 COPY entrypoint.sh /app/
-COPY server.py /app/
-
 
 # Run the entrypoint which starts the python server using wine
 EXPOSE 8080

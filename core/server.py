@@ -1,11 +1,32 @@
 from flask import Flask, jsonify, request
 from flasgger import Swagger
 
-import actions
-import types
+import .actions
+import .mytypes
 
 app = Flask(__name__)
 swagger = Swagger(app)
+
+@app.route('/up', methods=['GET'])
+def up():
+    """
+    ---
+    tags:
+      - Status
+    summary: Check server status
+    description: This route returns the status of the server to confirm it is operational.
+    responses:
+      200:
+        description: Server is operational.
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              description: The status of the server.
+              example: "success"
+    """
+    return jsonify({ "status": "success"})
 
 @app.route('/api/v1/pac', methods=['GET'])
 def list_all_pacs():
@@ -78,7 +99,7 @@ def add_pac():
     if not content:
         return jsonify({"error": "The 'content' field is required"}), 400
 
-    pac = types.PAC.new_pac(content)
+    pac = mytypes.PAC.new_pac(content)
 
     actions.add_pac(pac)
     return jsonify({"message": "PAC added successfully", "uid": pac.id}), 201
@@ -125,7 +146,7 @@ def evaluate_function():
     if not content:
         return jsonify({"error": "The 'content' field is required"}), 400
 
-    pac = types.PAC.new_pac(content)
+    pac = mytypes.PAC.new_pac(content)
     actions.add_pac(pac)
 
     return eval(pac, req_data)
@@ -184,7 +205,7 @@ def eval(pac, req_body):
     if not dest_host or not src_ip:
         return jsonify({"error": "Fields 'dest_host' and 'src_ip' are required"}), 400
 
-    eval_data = types.EvalData(pac, dest_host, src_ip)
+    eval_data = mytypes.EvalData(pac, dest_host, src_ip)
     result = actions.eval_pac(eval_data)
 
     return jsonify(result.full()), 200
