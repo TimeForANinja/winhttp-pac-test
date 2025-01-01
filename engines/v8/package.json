@@ -1,5 +1,6 @@
 {
   "main": "v8.js",
+  "type": "module",
   "scripts": {
     "start": "node v8.js"
   }
