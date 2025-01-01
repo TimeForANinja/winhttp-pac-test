@@ -112,10 +112,11 @@ class WINHTTP_PROXY_INFO(ctypes.Structure):
         ("lpszProxyBypass", ctypes.wintypes.LPCWSTR)
     ]
 
+
 def resolve_proxy_with_pac(destination_url, pac_url) -> dict:
     """Uses WinHTTP to resolve the proxy for the given URL using the PAC file."""
     with threading.Lock():
-        winhttp = ctypes.windllx.LoadLibrary(".\\winhttp.dll")
+        winhttp = ctypes.windll.LoadLibrary("winhttp.dll")
         print("destination_url", destination_url, "pac_url", pac_url)
         print("Platform", "supported" if winhttp.WinHttpCheckPlatform() else "unsupported")
 
