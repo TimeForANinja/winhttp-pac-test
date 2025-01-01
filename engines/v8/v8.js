@@ -1,4 +1,6 @@
 const http = require('http');
+const vm = require('vm');
+const { predefinedFuncs, build_cmd } = require( './util.js');
 
 // The port the server will run on
 const port = 8081;
@@ -30,3 +32,19 @@ const server = http.createServer((req, res) => {
 server.listen(port, () => {
     console.log(`Server is listening on port :${port}`);
 });
+
+const evalPac = (pacContent, testURL) => {
+    try {
+        let ctx = vm.createContext(Object.assign({}, predefinedFuncs));
+        vm.runInContext(pacContent, ctx);
+        if (typeof ctx.FindProxyForURL !== 'function') {
+            throw new Error('FindProxyForURL is not defined');
+        }
+
+        vm.runInContext(build_cmd(testURL), ctx);
+
+        return { status: 'success', result: ctx.test };
+    } catch (err) {
+        return { status: 'failed', error: err.message };
+    }
+}
