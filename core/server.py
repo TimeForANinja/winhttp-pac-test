@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 from flasgger import Swagger
+from urllib.parse import urlparse
 
 import .actions
 import .mytypes
@@ -198,12 +199,26 @@ def evaluate_by_uid(uid):
     return eval(pac, req_data)
 
 
+def validate_url(url):
+    try:
+        parsed = urlparse(url)
+        # Check scheme and hostname
+        if not parsed.scheme or not parsed.netloc:
+            return False
+        return True
+    except Exception:
+        return False
+
+
 def eval(pac, req_body):
     dest_host = req_body.get("dest_host")
     src_ip = req_body.get("src_ip")
 
     if not dest_host or not src_ip:
         return jsonify({"error": "Fields 'dest_host' and 'src_ip' are required"}), 400
+
+    if not validate_url(dest_host) or not validate_url(src_ip):
+        return jsonify({"error": "'dest_url' and 'src_ip' must be valid URLs"}), 400
 
     eval_data = mytypes.EvalData(pac, dest_host, src_ip)
     result = actions.eval_pac(eval_data)

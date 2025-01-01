@@ -46,6 +46,7 @@ class EvalData:
             "dest_url": self.dest_url,
             "src_ip": self.src_ip,
             "pac_url": f"http://127.0.0.1:8080/pac/{self.pac.id}",
+            "pac_content": self.pac.content,
         }
 
 class EvalResponse:

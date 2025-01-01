@@ -28,7 +28,8 @@ def list_pac() -> list[dict]:
 # Map of known "pac-engines"
 engines = {
     "v8": "http://localhost:8081/",
-    "winhttp": "http://localhost:8082/"
+    "winhttp": "http://localhost:8082/",
+    "eslint": "http://localhost:8083/",
 }
 
 def eval_pac(data: mytypes.EvalData) -> mytypes.EvalResponse:

@@ -54,7 +54,7 @@ const server = http.createServer(async (req, res) => {
 
             // Respond with the results as JSON
             if (formatted.length > 0) {
-                reply(res, false, { messages: formatted })
+                reply(res, false, { messages: formatted.join('\n') })
             } else {
                 reply(res, true, { messages: "No Problems Found" })
             }
