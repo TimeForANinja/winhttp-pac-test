@@ -35,15 +35,8 @@ export default [
         plugins: {
             '@stylistic/js': stylisticJs,
         },
-        files: [
-            '**/*.pac',
-            '**/*.dat',
-        ],
-        ignores: [
-            'dist/**',
-        ],
         rules: {
-            ...js.config.recommended.rules,
+            ...js.configs.recommended.rules,
             ...general_rules,
             // overwrites
             'prefer-arrow-callback': 'off',
@@ -62,46 +55,5 @@ export default [
                 'myIpAddress': 'readonly',
             }
         }
-    },
-
-    {
-        plugins: {
-            '@stylistic/js': stylisticJs,
-        },
-        files: [
-            '**/*.js',
-        ],
-        ignores: [
-            'dist/**',
-        ],
-        rules: {
-            ...js.config.recommended.rules,
-            ...general_rules,
-        },
-        languageOptions: {
-            globals: {
-                'console': 'readonly',
-            }
-        }
-    },
-
-    {
-        plugins: {
-            '@stylistic/js': stylisticJs,
-        },
-        files: [
-            'test/**',
-        ],
-        rules: {
-            ...js.config.recommended.rules,
-            ...general_rules,
-        },
-        languageOptions: {
-            globals: {
-                // mocha functions
-                'describe': 'readonly',
-                'it': 'readonly',
-            },
-        },
     },
 ];

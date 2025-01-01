@@ -1,5 +1,5 @@
-const { ESLint } = require("eslint");
-const http = require("http");
+import { ESLint } from "eslint";
+import http from "http";
 
 // The port the server will run on
 const port = 8083;
@@ -43,16 +43,21 @@ const server = http.createServer(async (req, res) => {
         try {
             const body = await parseRequestBody(req);
 
-            // Validate that the "code" field exists in the request body
-            if (!body.code) {
-                reply(res, false, { message: "Request body must contain a 'code' field." })
+            // Validate that the "pac_content" field exists in the request body
+            if (!body.pac_content) {
+                reply(res, false, { message: "Request body must contain a 'pac_content' field." })
                 return;
             }
 
-            const results = await eslint.lintText(body.code);
+            const results = await eslint.lintText(body.pac_content);
+            const formatted = results[0].messages.filter(x => x.severity >= 2).map(m => `${m.line}:${m.column} ${m.message} (${m.ruleId})`);
 
             // Respond with the results as JSON
-            reply(res, true, results)
+            if (formatted.length > 0) {
+                reply(res, false, { messages: formatted })
+            } else {
+                reply(res, true, { messages: "No Problems Found" })
+            }
         } catch (error) {
             console.error("Error processing request:", error.message);
             if (error instanceof SyntaxError) {
@@ -69,5 +74,5 @@ const server = http.createServer(async (req, res) => {
 
 // Start the server
 server.listen(port, () => {
-  console.log(`Server is listening on :${port}`);
+  console.log(`Server is listening on port :${port}`);
 });
