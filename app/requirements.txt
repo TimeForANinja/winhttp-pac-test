@@ -1,0 +1,4 @@
+requests~=2.32.3
+apiflask~=2.3.2
+marshmallow_dataclass~=8.7.1
+marshmallow~=3.23.3

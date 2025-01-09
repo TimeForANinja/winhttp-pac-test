@@ -6,7 +6,7 @@ LABEL authors=timeforaninja
 RUN dpkg --add-architecture i386
 # tune wine (enable 32bit mode & enforce wine directory)
 ENV WINEARCH="win32"
-ENV WINEPREFIX=/app/.wine/
+ENV WINEPREFIX=/pac-test/.wine/
 
 # Install necessary (generic) tools and dependencies
 RUN apt-get update
@@ -23,30 +23,30 @@ RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Set the working directory inside the container
-WORKDIR /app
+WORKDIR /pac-test
 
 # Copy the required files for installation(s) into the container
-COPY engines/ /app/engines/
-COPY core /app/core/
+COPY engines/ /pac-test/engines/
+COPY app /pac-test/app/
 
 # prep v8 - install nodejs dependencies
-RUN cd /app/engines/v8 && npm install
+RUN cd /pac-test/engines/v8 && npm install
 # prep eslint - install nodejs dependencies
-RUN cd /app/engines/eslint && npm install
+RUN cd /pac-test/engines/eslint && npm install
 # prep winhttp - install python
 # yes, the sleep at the end is essential...
 RUN xvfb-run wine engines/winhttp/python-3.12.8.exe /quiet PrependPath=1 InstallAllUsers=1 && sleep 10
 # prep core server - install python dependencies
 RUN python3 -m venv venv && \
     . venv/bin/activate && \
-    python3 -m pip install --break-system-packages -r core/requirements.txt
+    python3 -m pip install --break-system-packages -r /pac-test/app/requirements.txt
 
 # Define health check using the script
-COPY healthcheck.sh /app/healthcheck.sh
-HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 CMD /app/healthcheck.sh
+COPY healthcheck.sh /pac-test/healthcheck.sh
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 CMD /pac-test/healthcheck.sh
 
 # Copy missing runtime files
-COPY entrypoint.sh /app/
+COPY entrypoint.sh /pac-test/
 
 # Run the entrypoint which starts the python server using wine
 EXPOSE 8080
