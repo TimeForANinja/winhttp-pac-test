@@ -3,21 +3,27 @@ import requests
 # imports from other parts of this app
 from classes.eval_data import EvalData, EvalResponse, EngineResult
 
-# Map of known "pac-engines"
-engines = {
-    "v8": "http://localhost:8081/",
-    "winhttp": "http://localhost:8082/",
-    "eslint": "http://localhost:8083/",
-}
+FLAG_EVALUATION = "evaluation"
+FLAG_VALIDATION = "validation"
+
+# List of known "pac-engines"
+engines = [
+    {"name": "v8", "url": "http://localhost:8081/", "flags": [FLAG_EVALUATION, FLAG_VALIDATION]},
+    {"name": "winhttp", "url": "http://localhost:8082/", "flags": [FLAG_EVALUATION, FLAG_VALIDATION]},
+    {"name": "eslint", "url": "http://localhost:8083/", "flags": [FLAG_VALIDATION]},
+]
 
 
 def call_engines(data: EvalData) -> EvalResponse:
     eval_resp = EvalResponse(data)
 
-    for engine_name, engine_url in engines.items():
+    for engine in engines:
+        engine_name = engine["name"]
+        engine_flags = engine.get("flags", [])
+
         try:
             res = requests.post(
-                engine_url,
+                engine["url"],
                 json=data.engine_payload(),
                 timeout=5
             )
@@ -27,6 +33,7 @@ def call_engines(data: EvalData) -> EvalResponse:
                     engine=engine_name,
                     success="success",
                     response=res.json(),
+                    flags=engine_flags,
                 ))
             else:
                 try:
@@ -36,7 +43,8 @@ def call_engines(data: EvalData) -> EvalResponse:
                         success="failed",
                         error=body.error,
                         error_code=body.error_code,
-                        message=body.message
+                        message=body.message,
+                        flags=engine_flags
                     ))
                 except ValueError:
                     eval_resp.register_engine(EngineResult(
@@ -44,14 +52,16 @@ def call_engines(data: EvalData) -> EvalResponse:
                         success="failed",
                         message=f"Engine responded with status {res.status_code}, and response is not a JSON",
                         error=res.text,
-                        error_code=res.status_code
+                        error_code=res.status_code,
+                        flags=engine_flags
                     ))
         except requests.exceptions.Timeout:
             eval_resp.register_engine(EngineResult(
                 engine=engine_name,
                 success="failed",
                 error="Request to engine timed out",
-                error_code=500
+                error_code=500,
+                flags=engine_flags
             ))
         except requests.exceptions.RequestException as e:
             eval_resp.register_engine(EngineResult(
@@ -59,7 +69,8 @@ def call_engines(data: EvalData) -> EvalResponse:
                 success="failed",
                 error="Request to engine failed",
                 message=str(e),
-                error_code=400
+                error_code=400,
+                flags=engine_flags
             ))
 
     return eval_resp

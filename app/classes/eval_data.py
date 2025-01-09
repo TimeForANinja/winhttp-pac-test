@@ -43,6 +43,7 @@ class EngineResult:
         "required": True,
         "validate": OneOf(["success", "failed"]),
     })
+    flags: List[str] = field(default_factory=list)
     error_code: Optional[int] = None
     error: Optional[str] = field(default="")
     message: Optional[str] = field(default="")
