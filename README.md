@@ -7,11 +7,13 @@ Follow the instructions below for setup and usage.
 # Project Setup
 The Project is made up multiple modular Webservers, split into two main components.
 1. Core Server  
-This Server, located in the `/core`-Folder, is the Main Entrypoint for the End-User.  
+This Server, located in the `/app`-Folder, is the Main Entrypoint for the End-User.  
 It hosts an api (and swagger docs) for running tests on PAC Files.
 2. Engines  
 The Engines, various subfolders in the `/engines` Directory, are individual Web-Servers that do a single evaluation on the PAC.
 This includes Engines like the `v8` as a std javascript engine or `winhttp` to test the microsoft stack.
+3. Examples
+En example unit test script, including the required python code to interact with the api and csv test-data can be found in the `/example`-Folder.
 
 All other Files are for supportive Roles, e.g. the `entrypoint.sh` and `healthcheck.sh` are art of the Docker build.
 
@@ -52,43 +54,40 @@ After the core Server and all required engines are launched, you can start using
 Engines that are offline will result in a "failed due to timeout" error when running tests.
 
 # API Endpoints
-These are the most relevant API endpoints.
-1. **GET /apidocs/**: Retrieve API documentation.
-2. **POST /eval/**: Submit a PAC file for evaluation.
+For the "Main" Server you can find relevant auto-generated swagger docs under `/docs`.
+
+The Engines feature only two Endpoints:
+1. **GET /up/**: A simple Health-Check Endpoint to check if the Engine is running.
+2. **POST /**: Submit a PAC file for evaluation.
    - **Body Parameters**:
      ```
      {
+       "pac": {
+         "url": "string",     // URL of the PAC file
+                              // WinHTTP fetches it via POST from the Core-Server
+         "content": "string"  // Content of the PAC file
+                              // Other APIs can work directly with the content
+       },
        "dest_url": "string",    // URL to evaluate
-       "src_ip": "string",      // Client IP (engine-specific)
-       "pac_url": "string",     // URL of the PAC file
-       "pac_content": "string"  // Content of the PAC file
+       "src_ip": "string"       // Client IP (only some engines support this)
      }
      ```
    - **Returns**:
      ```
      {
-       "status": "success",     // Status of evaluation
-       "message": "string",     // Error message (if any)
-       "proxy": "any"           // Proxy result from evaluation
+       "status": "success",       // Status of evaluation (success or failed)
+       "error": "XYZ is invalid", // Explanation for the error (if failed)
+       "error_code": -1,          // Error Code if it failed (if failed)
+       "message": "string",       // Error message (if failed)
+       "proxy": "any"             // Proxy result from evaluation (if success)
      }
      ```
 
-# Engine-to-Core Interaction
-Detailed interaction between the Core and Engine is described below.
-The Core sends an evaluation payload to the Engine in the following format:
-The exact Object that's send from the Core to the Engine is defined in [EvalData#engine_payload](https://github.com/TimeForANinja/winhttp-pac-test/blob/main/core/mytypes.py#L45)
-```
-dest_url: string - link for which the pac is evaluated
-src_ip: string - ip of the client that evaluates the pac, not supported by all engines
-pac_url: string - url from which the pac can be fetched
-pac_content: string - content of the pac
-```
+# Engines
+The following Engines are packaged with the Library, and support the following Features.
 
-### Server Response Format
-The server responds with an HTTP status code (200, 4xx, or 5xx).
-The Response Body consists of:
-```
-status: failed | success - indicates whether the PAC evaluation was successful.
-message: string - mostly used for errors telling what exactly went wrong
-proxy: any - resulting proxy that returned after the pac evaluation
-```
+| Name   | Description                                       | Validation<br>(Is the Syntax valid) | Evaluation<br>(Simulate a PAC evaluation for a given dest host) | SRC_IP<br>(simulate a specific source ip for a pac resolution) |
+|--------|---------------------------------------------------|-------------------------------------|-----------------------------------------------------------------|----------------------------------------------------------------|
+| v8     | Generic Javascript v8 Engine (Nodejs Environment) | yes                                 | yes                                                             | yes                                                            |
+| eslint | Linting of the PAC File                           | yes                                 | no                                                              | no                                                             |
+| winhttp | WinHTTP evaluation of the PAC                    | yes                                 | yes                                                             | no                                                             | 
