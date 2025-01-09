@@ -38,7 +38,7 @@ class EvalWithPacInput(EvalInput):
 def register_eval_routes(app: APIFlask):
     @app.post('/api/v1/eval')
     @app.doc(tags=['Eval'], summary='Evaluate PAC', description='Evaluate a PAC')
-    @app.input(EvalWithPacInput.Schema, location='json', arg_name="json_data")
+    @app.input(EvalWithPacInput.Schema, location='json', arg_name="eval_data")
     @app.output(EvalResponse.Schema)
     def r_evaluate_after_adding_pac_function(eval_data: EvalWithPacInput):
         pac = PAC.new_pac(eval_data.content)
@@ -52,7 +52,7 @@ def register_eval_routes(app: APIFlask):
     @app.post('/api/v1/eval/<string:uid>')
     @app.doc(tags=['Eval'], summary='Evaluate PAC by UID', description='Evaluate a PAC by UID')
     @app.input(PACId.Schema, location='path', arg_name="pid")
-    @app.input(EvalInput.Schema, location='json', arg_name="json_data")
+    @app.input(EvalInput.Schema, location='json', arg_name="eval_data")
     @app.output(EvalResponse.Schema)
     def r_evaluate_by_uid_function(pid: PACId, uid: str, eval_data: EvalInput):
         pac = get_pac(pid.uid)

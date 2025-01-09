@@ -20,7 +20,7 @@ def get_pac(uid: str) -> PAC:
 
 def add_pac(pac: PAC):
     for existing in pac_store:
-        if existing.id == pac.uid:
+        if existing.uid == pac.uid:
             pac_store.remove(existing)
             break
     pac_store.append(pac)

@@ -49,11 +49,11 @@ class ProxyHandlerServer(BaseHTTPRequestHandler):
             return
 
         # Validate input
-        pac_url = data.get("pac_url")
+        pac_url = data.get("pac", {}).get("url")
         dest_url = data.get("dest_url")
 
         if not pac_url:
-            self.send_json_response({'status': 'failed',"error": "Field 'pac_url' is required"}, 400)
+            self.send_json_response({'status': 'failed',"error": "Field 'pac.url' is required"}, 400)
             return
 
         if not dest_url:
@@ -62,7 +62,7 @@ class ProxyHandlerServer(BaseHTTPRequestHandler):
 
         # Validate the format of URLs
         if not ProxyHandlerServer.validate_url(pac_url):
-            self.send_json_response({'status': 'failed',"error": "'pac_url' must be a valid URL"}, 400)
+            self.send_json_response({'status': 'failed',"error": "'pac.url' must be a valid URL"}, 400)
             return
 
         if not ProxyHandlerServer.validate_url(dest_url):
@@ -160,7 +160,7 @@ def resolve_proxy_with_pac(destination_url, pac_url) -> dict:
                 return parseWinHTTPError("WinHttpGetProxyForUrl", ctypes.GetLastError())
 
             # Extract the proxy string from proxy_info
-            proxy = proxy_info.lpszProxy if proxy_info.lpszProxy else "<no proxy>"
+            proxy = proxy_info.lpszProxy if proxy_info.lpszProxy else "DIRECT"
             return {
                 'status': 'success',
                 'proxy': proxy,

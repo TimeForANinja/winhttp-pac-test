@@ -44,19 +44,23 @@ const server = http.createServer(async (req, res) => {
             const body = await parseRequestBody(req);
 
             // Validate that the "pac_content" field exists in the request body
-            if (!body.pac_content) {
-                reply(res, false, { message: "Request body must contain a 'pac_content' field." })
+            if (!body.pac || !body.pac.content) {
+                reply(res, false, { message: "Request body must contain a 'pac.content' field." })
                 return;
             }
 
-            const results = await eslint.lintText(body.pac_content);
+            const results = await eslint.lintText(body.pac.content);
             const formatted = results[0].messages.filter(x => x.severity >= 2).map(m => `${m.line}:${m.column} ${m.message} (${m.ruleId})`);
 
             // Respond with the results as JSON
             if (formatted.length > 0) {
-                reply(res, false, { messages: formatted.join('\n') })
+                reply(res, false, {
+                    message: formatted.join('\n'),
+                    error_code: formatted.length,
+                    error: `${formatted.length} syntax errors found.`,
+                })
             } else {
-                reply(res, true, { messages: "No Problems Found" })
+                reply(res, true, { message: "No Problems Found" })
             }
         } catch (error) {
             console.error("Error processing request:", error.message);

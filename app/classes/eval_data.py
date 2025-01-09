@@ -1,6 +1,7 @@
 from dataclasses import field
 from typing import List, Optional
 from apiflask.validators import OneOf
+from marshmallow import post_dump
 from marshmallow_dataclass import dataclass
 
 # imports from other parts of this app
@@ -47,7 +48,16 @@ class EngineResult:
     error_code: Optional[int] = None
     error: Optional[str] = field(default="")
     message: Optional[str] = field(default="")
-    response: Optional[dict] = field(default_factory=dict)
+    proxy: Optional[str] = field(default="")
+
+    @post_dump
+    def remove_skip_values(self, data, **kwargs):
+        # remove all fields of type None or "" from the exported json
+        return {
+            key: value for key, value in data.items()
+            if value not in [None, ""]
+        }
+
 
 @dataclass
 class EvalResponse:
@@ -57,6 +67,7 @@ class EvalResponse:
 
     def __init__(self, eval_data: EvalData):
         self.request = eval_data
+        self.results = []
 
     def register_engine(self, er: EngineResult):
         self.results.append(er)

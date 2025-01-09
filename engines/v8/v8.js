@@ -41,8 +41,8 @@ const server = http.createServer(async (req, res) => {
             const body = await parseRequestBody(req);
 
             // Validate that the "pac_content" field exists in the request body
-            if (!body.pac_content) {
-                reply(res, false, { message: "Request body must contain a 'pac_content' field." })
+            if (!body.pac || !body.pac.content) {
+                reply(res, false, { message: "Request body must contain a 'pac.content' field." })
                 return;
             }
 
@@ -52,7 +52,7 @@ const server = http.createServer(async (req, res) => {
                 return;
             }
 
-            const results = evalPac(body.pac_content, body.dest_url);
+            const results = evalPac(body.pac.content, body.dest_url);
 
             // Respond with the results as JSON
             reply(res, true, results)

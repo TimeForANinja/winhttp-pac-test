@@ -5,10 +5,11 @@ from classes.eval_data import EvalData, EvalResponse, EngineResult
 
 FLAG_EVALUATION = "evaluation"
 FLAG_VALIDATION = "validation"
+FLAG_SRC_IP = "src_ip"
 
 # List of known "pac-engines"
 engines = [
-    {"name": "v8", "url": "http://localhost:8081/", "flags": [FLAG_EVALUATION, FLAG_VALIDATION]},
+    {"name": "v8", "url": "http://localhost:8081/", "flags": [FLAG_EVALUATION, FLAG_VALIDATION, FLAG_SRC_IP]},
     {"name": "winhttp", "url": "http://localhost:8082/", "flags": [FLAG_EVALUATION, FLAG_VALIDATION]},
     {"name": "eslint", "url": "http://localhost:8083/", "flags": [FLAG_VALIDATION]},
 ]
@@ -32,7 +33,7 @@ def call_engines(data: EvalData) -> EvalResponse:
                 eval_resp.register_engine(EngineResult(
                     engine=engine_name,
                     success="success",
-                    response=res.json(),
+                    proxy=res.json().get("proxy", "<undefined>"),
                     flags=engine_flags,
                 ))
             else:
@@ -41,9 +42,9 @@ def call_engines(data: EvalData) -> EvalResponse:
                     eval_resp.register_engine(EngineResult(
                         engine=engine_name,
                         success="failed",
-                        error=body.error,
-                        error_code=body.error_code,
-                        message=body.message,
+                        error=body.get("error", ""), # "Unknown Error"),
+                        error_code=body.get("error_code", 1),
+                        message=body.get("message", "No Message"),
                         flags=engine_flags
                     ))
                 except ValueError:
