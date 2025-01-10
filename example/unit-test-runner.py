@@ -92,7 +92,6 @@ for csv_file in csv_files:
                     "src_ip": test["src_ip"],
                     "content": file_content,
                 }
-                #print("payload", payload)
 
                 # API call
                 response = requests.post(api_url, json=payload)

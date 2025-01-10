@@ -20,11 +20,11 @@ function FindProxyForURL(url, host)
 {
 	if (host == 'google.com')
 	{
-		return 'proxy02';
+		return 'PROXY proxy02;';
 	}
-//	if (arrayIncludes(force_direct, host))
-//	{
-//		return 'DIRECT';
-//	}
-	return 'intproxy01';
+	if (arrayIncludes(force_direct, host))
+	{
+		return 'DIRECT';
+	}
+	return 'PROXY intproxy01;';
 }

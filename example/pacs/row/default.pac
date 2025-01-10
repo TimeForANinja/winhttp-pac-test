@@ -3,7 +3,7 @@ function FindProxyForURL(url, host)
 {
 	if (host == 'google.com')
 	{
-		return 'proxy02';
+		return 'PROXY proxy02';
 	}
-	return 'rowproxy01';
+	return 'PROXY rowproxy01';
 }
