@@ -11,7 +11,7 @@ from fnmatch import fnmatch
 tests_dir = "tests/"
 pacs_dir = "pacs/"
 log_file = "test_log.txt"
-api_server = "localhost:8080"
+api_server = "127.0.0.1:8080"
 api_url = f"http://{api_server}/api/v1/eval"
 
 # Setup logging

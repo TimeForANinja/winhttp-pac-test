@@ -135,8 +135,8 @@ class WINHTTP_AUTOPROXY_OPTIONS(ctypes.Structure):
         ("dwFlags", ctypes.wintypes.DWORD),
         ("dwAutoDetectFlags", ctypes.wintypes.DWORD),
         ("lpszAutoConfigUrl", ctypes.wintypes.LPCWSTR),
-        #("lpvReserved", ctypes.c_void_p),
-        #("dwReserved", ctypes.wintypes.DWORD),
+        ("lpvReserved", ctypes.c_void_p),
+        ("dwReserved", ctypes.wintypes.DWORD),
         ("fAutoLogonIfChallenged", ctypes.wintypes.BOOL)
     ]
 
@@ -148,6 +148,15 @@ class WINHTTP_PROXY_INFO(ctypes.Structure):
         ("lpszProxyBypass", ctypes.wintypes.LPCWSTR)
     ]
 
+winhttp = None
+def initWinHTTP():
+    global winhttp
+    winhttp = ctypes.windll.LoadLibrary("winhttp.dll")
+
+    # check support
+    print("Platform", "supported" if winhttp.WinHttpCheckPlatform() else "unsupported")
+    if winhttp.WinHttpCheckPlatform() == 0:
+        raise Exception("WinHTTP is not supported on this platform.")
 
 def resolve_proxy_with_pac(dest_host, pac_url) -> dict:
     """Uses WinHTTP to resolve the proxy for the given URL using the PAC file."""
@@ -156,13 +165,9 @@ def resolve_proxy_with_pac(dest_host, pac_url) -> dict:
         destination_url = f"https://{dest_host}/test"
         print("dest_host", dest_host, "destination_url", destination_url, "pac_url", pac_url)
 
-        winhttp = ctypes.windll.LoadLibrary("winhttp.dll")
-        # check support
-        print("Platform", "supported" if winhttp.WinHttpCheckPlatform() else "unsupported")
-
         # Initialize WinHTTP session
         hSession = winhttp.WinHttpOpen(
-            ctypes.c_wchar_p("PacTest"),  # user agent string
+            ctypes.c_wchar_p("WinHTTP-Engine"),  # user agent string
             WINHTTP_ACCESS_TYPE_NO_PROXY,
             WINHTTP_NO_PROXY_NAME,
             WINHTTP_NO_PROXY_BYPASS,
@@ -173,18 +178,18 @@ def resolve_proxy_with_pac(dest_host, pac_url) -> dict:
             return parseWinHTTPError("WinHttpOpen", ctypes.GetLastError())
 
         # force clear cache
-        result = winhttp.WinHttpResetAutoProxy(
-            hSession,
-            WINHTTP_RESET_NOTIFY_NETWORK_CHANGED | WINHTTP_RESET_OUT_OF_PROC | WINHTTP_RESET_ALL,
-        )
-        print("Clearing Cache", "successfull" if result==0 else f"failed with code {result}")
+        #result = winhttp.WinHttpResetAutoProxy(
+        #    hSession,
+        #    WINHTTP_RESET_NOTIFY_NETWORK_CHANGED | WINHTTP_RESET_OUT_OF_PROC | WINHTTP_RESET_ALL,
+        #)
+        #print("Clearing Cache", "successfull" if result==0 else f"failed with code {result}")
 
         try:
             auto_proxy_options = WINHTTP_AUTOPROXY_OPTIONS()
             auto_proxy_options.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL
             auto_proxy_options.dwAutoDetectFlags = 0
-            auto_proxy_options.fAutoLogonIfChallenged = False
             auto_proxy_options.lpszAutoConfigUrl = ctypes.wintypes.LPCWSTR(pac_url)
+            auto_proxy_options.fAutoLogonIfChallenged = False
 
             proxy_info = WINHTTP_PROXY_INFO()
 
@@ -205,6 +210,12 @@ def resolve_proxy_with_pac(dest_host, pac_url) -> dict:
                 'status': 'success',
                 'proxy': proxy,
             }
+        except Exception as e:
+            return {
+                'status': 'failed',
+                'error_code': 1,
+                'error': f"Failed to parse PAC: {str(e)}"
+            }
 
         finally:
             # Properly close the WinHTTP session handle
@@ -223,4 +234,6 @@ class InvalidArchitectureError(Exception):
 if __name__ == "__main__":
     if not InvalidArchitectureError.is_python_32bit():
         raise InvalidArchitectureError("WinHTTP must be running on 32-bit architecture.")
+    initWinHTTP()
+
     ProxyHandlerServer.new_server()
