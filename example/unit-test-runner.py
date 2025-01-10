@@ -29,14 +29,28 @@ logging.info("==================")
 # Initialize failure count
 failed_tests = 0
 
+# util function to check if csv is as expected
+required_columns = {"id", "description", "file", "dest_host", "src_ip", "expected_output", "required_flags"}
+def validate_csv_columns(df):
+    """
+    Validate that all required columns are present in the CSV file.
+
+    :param df: The pandas DataFrame loaded from the CSV file.
+    :param required_columns: A set of columns that are required to be present in the DataFrame.
+    :param csv_file: The name of the CSV file (used for logging purposes).
+    :return: A tuple (is_valid, missing_columns). is_valid is a boolean indicating success,
+             and missing_columns is a set of missing columns (empty if valid).
+    """
+    missing_columns = required_columns - set(df.columns)
+    if missing_columns:
+        logging.error(f"The file 'is missing required column(s): {', '.join(missing_columns)}")
+        return False
+    return True
+
+
 # Load all test cases
 csv_files = glob.glob(os.path.join(tests_dir, "**", "*.test.csv"), recursive=True)
-test_cases = []
 
-for csv_file in csv_files:
-    df = pd.read_csv(csv_file)
-    df["source_file"] = os.path.relpath(os.path.abspath(csv_file), os.path.abspath(tests_dir))
-    test_cases.extend(df.to_dict("records"))
 
 # Recursively list all files in pacs/ using glob.glob
 available_files = [
@@ -45,45 +59,75 @@ available_files = [
     in glob.glob(os.path.join(pacs_dir, "**", "*"), recursive=True)
     if os.path.isfile(f)
 ]
-logging.info(f"Found the following Assets:\ntest csv files: {len(csv_files)}, test_cases: {len(test_cases)}, pac files: {len(available_files)}")
+logging.info(f"Found the following Assets: (test-csv-files= {len(csv_files)}, pac-files={len(available_files)})")
 
 # Helper function to match files with wildcard
 def find_matching_files(pattern):
     return [f for f in available_files if fnmatch(f, pattern)]
 
-# Execute tests
-for test in test_cases:
-    try:
-        file_pattern = test["file"]
-        matching_files = find_matching_files(file_pattern)
+for csv_file in csv_files:
+    df = pd.read_csv(csv_file)
+    if not validate_csv_columns(df):
+        continue
+    df["source_file"] = os.path.relpath(os.path.abspath(csv_file), os.path.abspath(tests_dir))
+    df["required_flags"] = df["required_flags"].fillna("")
+    test_cases = df.to_dict("records")
+    logging.info(f"= Running tests for file '{csv_file}'")
 
-        for file_path in matching_files:
-            with open(os.path.join(pacs_dir, file_path), "r") as file:
-                file_content = file.read()
+    # Execute tests
+    for test in test_cases:
+        logging.info(f"== Running test-case {int(test['id']):03d} / {len(test_cases):03d}: '{test['description']}'")
+        try:
+            file_pattern = test["file"]
+            matching_files = find_matching_files(file_pattern)
 
-            # Prepare JSON payload
-            payload = {
-                # todo: add the http:// on the backend
-                # todo: make sure src_ip is an ip and no fqdn
-                "dest_host": "http://" + test["dest_host"],
-                "src_ip": "http://" + test["src_ip"],
-                "content": file_content,
-            }
-            print("payload", payload)
+            for file_path in matching_files:
+                logging.info(f"=== Running test-case on {file_path}")
+                with open(os.path.join(pacs_dir, file_path), "r") as file:
+                    file_content = file.read()
 
-            # API call
-            response = requests.post(api_url, json=payload)
-            response_json = response.json()
+                # Prepare JSON payload
+                payload = {
+                    "dest_host": test["dest_host"],
+                    "src_ip": test["src_ip"],
+                    "content": file_content,
+                }
+                #print("payload", payload)
 
-            if response.status_code == 200 and response_json.get("status") == "success":
-                logging.info(f"PASS: Test for file '{file_path}' succeeded.")
-            else:
-                logging.error(f"FAIL: Test for file '{file_path}' failed. Response: {json.dumps(response_json)}")
-                failed_tests += 1
+                # API call
+                response = requests.post(api_url, json=payload)
+                response_json = response.json()
 
-    except Exception as e:
-        logging.error(f"ERROR: Exception during test for file '{test.get('file', 'Unknown')}'. Error: {str(e)}")
-        failed_tests += 1
+                if response.status_code != 200 or response_json.get("status") != "success":
+                    logging.error(f"    FAIL: Request for file '{file_path}' failed. Response: {json.dumps(response_json)}")
+                    failed_tests += 1
+                else:
+                    results = response_json.get("results", [])
+                    for result in results:
+                        logging.info(f"==== Engine '{result['engine']}'")
+                        if test['required_flags'] != "" and test['required_flags'] not in result.get('flags', []):
+                            logging.info(f"     SKIPPED: Missing flags")
+                            # skip engine if it does not support the feature we need
+                            continue
+
+                        if result.get("status") != "success":
+                            logging.error(f"     FAIL: Engine reported problems. error {result['error_code']}: {result['error']}.\n{result['message']}\nFull Response: {json.dumps(result)}")
+                            failed_tests += 1
+                            continue
+
+                        if 'evaluation' in result.get('flags', []):
+                            # if evaluation is supported we check roxy resulting from the evaluation
+                            if test['expected_output'] != result['proxy']:
+                                logging.error(f"     FAIL: Invalid Proxy. Expected: {test['expected_output']}, Actual: {result['proxy']}")
+                                failed_tests += 1
+                                continue
+
+                        # no check failed, so we pass
+                        logging.info(f"      PASS: Test succeeded.")
+
+        except Exception as e:
+            logging.error(f"   ERROR: Exception during tests. Error: {str(e)}")
+            failed_tests += 1
 
 # Exit with failure count as the status code
 exit(failed_tests)
