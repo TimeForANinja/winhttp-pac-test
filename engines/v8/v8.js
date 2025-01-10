@@ -1,6 +1,6 @@
 import http from 'http';
 import vm from 'vm';
-import { predefinedFuncs, build_cmd } from  './util.js';
+import { buildPredefinedFuncs, build_cmd, ValidateIP, ValidateHostname } from  './util.js';
 
 // The port the server will run on
 const port = 8081;
@@ -46,13 +46,19 @@ const server = http.createServer(async (req, res) => {
                 return;
             }
 
-            // Validate that the "code" field exists in the request body
-            if (!body.dest_url) {
-                reply(res, false, { message: "Request body must contain a 'dest_url' field." })
+            // Validate that the "dest_host" field exists in the request body
+            if (!body.dest_host || !ValidateHostname(body.dest_host)) {
+                reply(res, false, { message: "Request body must contain a 'dest_host' field, which is a valid hostname." })
                 return;
             }
 
-            const results = evalPac(body.pac.content, body.dest_url);
+            // Validate that the "src_ip" field exists in the request body
+            if (!body.src_ip || !ValidateIP(body.src_ip)) {
+                reply(res, false, { message: "Request body must contain a 'src_ip' field, which is a valid IP address." })
+                return;
+            }
+
+            const results = evalPac(body.pac.content, body.dest_host, body.src_ip);
 
             // Respond with the results as JSON
             reply(res, true, results)
@@ -75,15 +81,16 @@ server.listen(port, () => {
     console.log(`Server is listening on port :${port}`);
 });
 
-const evalPac = (pacContent, testURL) => {
+const evalPac = (pacContent, testHost, src_ip) => {
     try {
+        const predefinedFuncs = buildPredefinedFuncs(src_ip);
         let ctx = vm.createContext(Object.assign({}, predefinedFuncs));
         vm.runInContext(pacContent, ctx);
         if (typeof ctx.FindProxyForURL !== 'function') {
             throw new Error('FindProxyForURL is not defined');
         }
 
-        vm.runInContext(build_cmd(testURL), ctx);
+        vm.runInContext(build_cmd(testHost), ctx);
 
         return { status: 'success', proxy: ctx.test };
     } catch (err) {

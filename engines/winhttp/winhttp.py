@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from error_parser import parseWinHTTPError
 import json
+import re
 import threading
 
 # Constants for WinHTTP API
@@ -21,6 +22,10 @@ WINHTTP_RESET_SCRIPT_CACHE = 0x00000008
 WINHTTP_RESET_ALL = 0x0000FFFF
 WINHTTP_RESET_NOTIFY_NETWORK_CHANGED = 0x00010000
 WINHTTP_RESET_OUT_OF_PROC = 0x00020000
+
+# Regex for Validations
+ip_regex = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')
+hostname_regex = re.compile(r'^(?!:\/\/)([a-zA-Z0-9.-]{1,253})\.([a-zA-Z]{2,63})$')
 
 
 class ProxyHandlerServer(BaseHTTPRequestHandler):
@@ -50,14 +55,14 @@ class ProxyHandlerServer(BaseHTTPRequestHandler):
 
         # Validate input
         pac_url = data.get("pac", {}).get("url")
-        dest_url = data.get("dest_url")
+        dest_host = data.get("dest_host")
 
         if not pac_url:
             self.send_json_response({'status': 'failed',"error": "Field 'pac.url' is required"}, 400)
             return
 
-        if not dest_url:
-            self.send_json_response({'status': 'failed',"error": "Field 'dest_url' is required"}, 400)
+        if not dest_host:
+            self.send_json_response({'status': 'failed',"error": "Field 'dest_host' is required"}, 400)
             return
 
         # Validate the format of URLs
@@ -65,15 +70,15 @@ class ProxyHandlerServer(BaseHTTPRequestHandler):
             self.send_json_response({'status': 'failed',"error": "'pac.url' must be a valid URL"}, 400)
             return
 
-        if not ProxyHandlerServer.validate_url(dest_url):
-            self.send_json_response({'status': 'failed',"error": "'dest_url' must be a valid URL"}, 400)
+        if not ProxyHandlerServer.validate_hostname(dest_host):
+            self.send_json_response({'status': 'failed',"error": "'dest_host' must be a valid Hostname"}, 400)
             return
 
         try:
-            eval = resolve_proxy_with_pac(dest_url, pac_url)
+            eval = resolve_proxy_with_pac(dest_host, pac_url)
             self.send_json_response(eval, 200)
         except Exception as e:
-            self.send_json_response({'status': 'failed',"error": "Unexpexted Error during evaluation", "message": str(e)}, 500)
+            self.send_json_response({'status': 'failed',"error": "Unexpected Error during evaluation", "message": str(e)}, 500)
 
     @staticmethod
     def validate_url(url):
@@ -85,6 +90,37 @@ class ProxyHandlerServer(BaseHTTPRequestHandler):
             return True
         except Exception:
             return False
+
+    @staticmethod
+    def validate_ip(ip_address: str) -> bool:
+        """
+        Validate if the input is a valid IP address (IPv4).
+
+        :param ip_address: The string to validate as an IP address.
+        :return: True if the input is a valid IP address, otherwise False.
+        """
+        if not ip_regex.match(ip_address):
+            return False
+
+        # Ensure each segment (octet) is between 0-255
+        return all(0 <= int(num) <= 255 for num in ip_address.split('.'))
+
+    @staticmethod
+    def validate_hostname(hostname: str) -> bool:
+        """
+        Validate if the input is a valid hostname (excluding protocol).
+
+        :param hostname: The string to validate as a hostname.
+        :return: True if the input is a valid hostname, otherwise False.
+        """
+        # Validate for valid 'localhost'
+        if hostname == "localhost":
+            return True
+
+        if ProxyHandlerServer.validate_ip(hostname):
+            return True
+
+        return bool(hostname_regex.match(hostname))
 
     @staticmethod
     def new_server(port=8082):
@@ -113,11 +149,15 @@ class WINHTTP_PROXY_INFO(ctypes.Structure):
     ]
 
 
-def resolve_proxy_with_pac(destination_url, pac_url) -> dict:
+def resolve_proxy_with_pac(dest_host, pac_url) -> dict:
     """Uses WinHTTP to resolve the proxy for the given URL using the PAC file."""
     with threading.Lock():
+        # prep input params
+        destination_url = f"https://{dest_host}/test"
+        print("dest_host", dest_host, "destination_url", destination_url, "pac_url", pac_url)
+
         winhttp = ctypes.windll.LoadLibrary("winhttp.dll")
-        print("destination_url", destination_url, "pac_url", pac_url)
+        # check support
         print("Platform", "supported" if winhttp.WinHttpCheckPlatform() else "unsupported")
 
         # Initialize WinHTTP session

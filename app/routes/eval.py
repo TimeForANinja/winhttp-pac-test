@@ -9,19 +9,19 @@ from classes.pac import PAC
 from pac_engines import call_engines
 from pac_storage import get_pac, add_pac
 from routes.schemas.pac_uid import PACId
-from validators.url import URLValidator
+from validators.url import IPValidator, HostnameValidator
 
 
 @dataclass
 class EvalInput:
     dest_host: str = field(metadata={
         "required": True,
-        "validate": URLValidator('"dest_host" must be a valid URL'),
+        "validate": HostnameValidator('"dest_host" must be a valid URL'),
         "description": "The destination host URL",
     })
     src_ip: str = field(metadata={
         "required": True,
-        "validate": URLValidator('"src_ip" must be a valid URL'),
+        "validate": IPValidator('"src_ip" must be a valid URL'),
         "description": "The source IP URL",
     })
 

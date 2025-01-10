@@ -11,19 +11,19 @@ from classes.pac import PAC
 @dataclass
 class EvalData:
     pac: PAC
-    dest_url: str
+    dest_host: str
     src_ip: str
 
-    def __init__(self, pac: PAC, dest_url: str, src_ip: str):
+    def __init__(self, pac: PAC, dest_host: str, src_ip: str):
         self.pac = pac
-        self.dest_url = dest_url
+        self.dest_host = dest_host
         self.src_ip = src_ip
 
     def simple(self) -> dict:
         return {
             "pac": self.pac.uid,
             "src_ip": self.src_ip,
-            "dest_url": self.dest_url,
+            "dest_host": self.dest_host,
         }
 
     def engine_payload(self) -> dict:
@@ -34,13 +34,13 @@ class EvalData:
                 "content": self.pac.content,
             },
             "src_ip": self.src_ip,
-            "dest_url": self.dest_url,
+            "dest_host": self.dest_host,
         }
 
 @dataclass
 class EngineResult:
     engine: str
-    success: str = field(metadata={
+    status: str = field(metadata={
         "required": True,
         "validate": OneOf(["success", "failed"]),
     })
@@ -62,7 +62,7 @@ class EngineResult:
 @dataclass
 class EvalResponse:
     request: EvalData
-    success: str = field(default="success")
+    status: str = field(default="success")
     results: List[EngineResult] = field(default_factory=list)
 
     def __init__(self, eval_data: EvalData):

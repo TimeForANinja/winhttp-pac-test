@@ -32,7 +32,7 @@ def call_engines(data: EvalData) -> EvalResponse:
             if res.status_code == 200:
                 eval_resp.register_engine(EngineResult(
                     engine=engine_name,
-                    success="success",
+                    status="success",
                     proxy=res.json().get("proxy", "<undefined>"),
                     flags=engine_flags,
                 ))
@@ -41,7 +41,7 @@ def call_engines(data: EvalData) -> EvalResponse:
                     body=res.json()
                     eval_resp.register_engine(EngineResult(
                         engine=engine_name,
-                        success="failed",
+                        status="failed",
                         error=body.get("error", ""), # "Unknown Error"),
                         error_code=body.get("error_code", 1),
                         message=body.get("message", "No Message"),
@@ -50,7 +50,7 @@ def call_engines(data: EvalData) -> EvalResponse:
                 except ValueError:
                     eval_resp.register_engine(EngineResult(
                         engine=engine_name,
-                        success="failed",
+                        status="failed",
                         message=f"Engine responded with status {res.status_code}, and response is not a JSON",
                         error=res.text,
                         error_code=res.status_code,
@@ -59,7 +59,7 @@ def call_engines(data: EvalData) -> EvalResponse:
         except requests.exceptions.Timeout:
             eval_resp.register_engine(EngineResult(
                 engine=engine_name,
-                success="failed",
+                status="failed",
                 error="Request to engine timed out",
                 error_code=500,
                 flags=engine_flags
@@ -67,7 +67,7 @@ def call_engines(data: EvalData) -> EvalResponse:
         except requests.exceptions.RequestException as e:
             eval_resp.register_engine(EngineResult(
                 engine=engine_name,
-                success="failed",
+                status="failed",
                 error="Request to engine failed",
                 message=str(e),
                 error_code=400,

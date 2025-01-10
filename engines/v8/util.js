@@ -1,6 +1,6 @@
 // Object for use as global context that includes all functions that can be used inside a PAC script
 /* eslint-disable no-undef */
-export const predefinedFuncs = {
+const predefinedFuncs = {
     // taken from https://gist.github.com/nmoinvaz/82dd7e29e65e93ecd4ea6d2d2a5ccca1
     dnsDomainIs: (host, domain) => {
         return (host.length >= domain.length
@@ -64,8 +64,45 @@ export const predefinedFuncs = {
 }
 /* eslint-enable no-undef */
 
+export const buildPredefinedFuncs = (src_ip) => {
+    return Object.assign({}, predefinedFuncs, {
+        // overwrite myIpAddress
+        myIpAddress: () => src_ip
+    })
+}
+
 // helper func to build a vm command to execute
 export const build_cmd = (host, url=null) => {
     let must_url = url ? url : 'https://' + host + '/test'
     return `test = FindProxyForURL('${must_url}', '${host}');`
+}
+
+
+const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+/**
+ * Validate if the input is a valid IP address (IPv4).
+ * @param {string} ipAddress - The string to validate as an IP address.
+ * @returns {boolean} - Returns true if the input is a valid IP address, otherwise false.
+ */
+export const ValidateIP = (ipAddress) => {
+  if (!ipRegex.test(ipAddress)) return false;
+
+  // Ensure each segment (octet) is between 0-255
+  return ipAddress.split('.').every(num => Number(num) >= 0 && Number(num) <= 255);
+}
+
+
+const hostnameRegex = /^(?!:\/\/)([a-zA-Z0-9.-]{1,253})\.([a-zA-Z]{2,63})$/;
+/**
+ * Validate if the input is a valid hostname (excluding protocol).
+ * @param {string} hostname - The string to validate as a hostname.
+ * @returns {boolean} - Returns true if the input is a valid hostname, otherwise false.
+ */
+export const ValidateHostname = (hostname) => {
+  // Validate for valid 'localhost'
+  if (hostname === "localhost") return true;
+
+  if (ValidateIP(hostname)) return true;
+
+  return hostnameRegex.test(hostname);
 }
