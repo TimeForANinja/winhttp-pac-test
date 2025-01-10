@@ -1,7 +1,7 @@
-id,descriptiom,file,dest_host,src_ip,expected_output,required_flags
-1,international should send IPs via intproxy,int-*,localhost,192.168.1.1,intproxy,
-2,knternational germany should reach heise direct,int-germany/*.pac,heise.com,192.168.1.1,direct,
+id,description,file,dest_host,src_ip,expected_output,required_flags
+1,international should send IPs via intproxy,int-*/default.pac,localhost,192.168.1.1,intproxy01,
+2,international germany should reach heise direct,int-germany/*.pac,heise.com,192.168.1.1,DIRECT,
 3,all pacs should send google via proxy02,*.pac,google.com,192.168.1.2,proxy02,
-4,wpad is always direct,*wpad*,testserver,127.0.0.1,direct,
-5,even gets proxy01,nat-germany/default.pac,google.com,127.0.0.2,proxy01,src_ip
-6,uneven gets proxy02,nat-germany/default.pac,google.com,127.0.0.1,proxy02,src_ip
+4,wpad is always direct,*wpad*,example.com,127.0.0.1,DIRECT,
+5,even gets proxy01,nat-germany/default.pac,google.com,127.0.0.2,natproxy01,src_ip
+6,uneven gets proxy02,nat-germany/default.pac,google.com,127.0.0.1,natproxy02,src_ip

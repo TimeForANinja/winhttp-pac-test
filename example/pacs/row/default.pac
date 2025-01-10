@@ -1,3 +1,9 @@
-function FindProxyForURL(url, host) {
-    return "rowproxy01"
+// eslint-disable-next-line no-unused-vars
+function FindProxyForURL(url, host)
+{
+	if (host == 'google.com')
+	{
+		return 'proxy02';
+	}
+	return 'rowproxy01';
 }
