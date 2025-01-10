@@ -92,7 +92,26 @@ const evalPac = (pacContent, testHost, src_ip) => {
 
         vm.runInContext(build_cmd(testHost), ctx);
 
-        return { status: 'success', proxy: ctx.test };
+        // post-process returned proxy
+        let proxy = []
+        if (ctx.test && typeof ctx.test === 'string') {
+            const parts = ctx.test.split(';');
+            for (const part of parts) {
+                if (part === "DIRECT") {
+                    proxy.push("DIRECT");
+                } else if (part.startsWith('PROXY ')) {
+                    proxy.push(part.substr(6));
+                } else if (part === "") {
+                    // do nothing / skip
+                } else{
+                    return proxy.push(part);
+                }
+            }
+        } else {
+            proxy.push('<no proxy>');
+        }
+
+        return { status: 'success', proxy: proxy.join(';') };
     } catch (err) {
         return { status: 'failed', message: err.message };
     }
