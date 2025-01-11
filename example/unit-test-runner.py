@@ -34,10 +34,7 @@ def validate_csv_columns(df):
     Validate that all required columns are present in the CSV file.
 
     :param df: The pandas DataFrame loaded from the CSV file.
-    :param required_columns: A set of columns that are required to be present in the DataFrame.
-    :param csv_file: The name of the CSV file (used for logging purposes).
-    :return: A tuple (is_valid, missing_columns). is_valid is a boolean indicating success,
-             and missing_columns is a set of missing columns (empty if valid).
+    :return: A bool "is_valid" indicating success.
     """
     missing_columns = required_columns - set(df.columns)
     if missing_columns:

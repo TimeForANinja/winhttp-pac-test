@@ -3,7 +3,7 @@ import struct
 from ctypes import wintypes
 from urllib.parse import urlparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from error_parser import parseWinHTTPError
+from error_parser import parse_winhttp_error
 import json
 import re
 import threading
@@ -75,8 +75,8 @@ class ProxyHandlerServer(BaseHTTPRequestHandler):
             return
 
         try:
-            eval = resolve_proxy_with_pac(dest_host, pac_url)
-            self.send_json_response(eval, 200)
+            eval_result = resolve_proxy_with_pac(dest_host, pac_url)
+            self.send_json_response(eval_result, 200)
         except Exception as e:
             self.send_json_response({'status': 'failed',"error": "Unexpected Error during evaluation", "message": str(e)}, 500)
 
@@ -149,7 +149,7 @@ class WINHTTP_PROXY_INFO(ctypes.Structure):
     ]
 
 winhttp = None
-def initWinHTTP():
+def init_winhttp():
     global winhttp
     winhttp = ctypes.windll.LoadLibrary("winhttp.dll")
 
@@ -175,7 +175,7 @@ def resolve_proxy_with_pac(dest_host, pac_url) -> dict:
         )
         print("Session created", hSession)
         if not hSession:
-            return parseWinHTTPError("WinHttpOpen", ctypes.GetLastError())
+            return parse_winhttp_error("WinHttpOpen", ctypes.GetLastError())
 
         # force clear cache
         #result = winhttp.WinHttpResetAutoProxy(
@@ -202,7 +202,7 @@ def resolve_proxy_with_pac(dest_host, pac_url) -> dict:
             )
 
             if not result:
-                return parseWinHTTPError("WinHttpGetProxyForUrl", ctypes.GetLastError())
+                return parse_winhttp_error("WinHttpGetProxyForUrl", ctypes.GetLastError())
 
             # Extract the proxy string from proxy_info
             proxy = proxy_info.lpszProxy if proxy_info.lpszProxy else "DIRECT"
@@ -234,6 +234,6 @@ class InvalidArchitectureError(Exception):
 if __name__ == "__main__":
     if not InvalidArchitectureError.is_python_32bit():
         raise InvalidArchitectureError("WinHTTP must be running on 32-bit architecture.")
-    initWinHTTP()
+    init_winhttp()
 
     ProxyHandlerServer.new_server()

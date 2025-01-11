@@ -38,13 +38,13 @@ If you want to do development, or are unable to use the Docker build, you can ru
    4) start the server using `python3 server.py`
 2) Start the individual engines
    1) javascript engines
-      1) Make sure nodejs and npm are installed
+      1) Make sure Node.js and npm are installed
       2) go to the desired engine in `./engines/*`
       3) run `npm install` to download dependencies
       4) run `npm start` to launch the server
    2) winhttp engine
       1) make sure you have python3 32bit installed and available
-      2) make sure you are on windows os (or use wine, example for this is in the Dockerfile)
+      2) make sure you are on Windows os (or use wine, example for this is in the Dockerfile)
       3) go to the desired engine in `./engines/*`
       4) run `python32bit -m pip install -r requirements.txt` to download dependencies
       5) run `python32bit winhttp.py` to launch the Server
@@ -86,8 +86,8 @@ The Engines feature only two Endpoints:
 # Engines
 The following Engines are packaged with the Library, and support the following Features.
 
-| Name   | Description                                       | Validation<br>(Is the Syntax valid) | Evaluation<br>(Simulate a PAC evaluation for a given dest host) | SRC_IP<br>(simulate a specific source ip for a pac resolution) |
-|--------|---------------------------------------------------|-------------------------------------|-----------------------------------------------------------------|----------------------------------------------------------------|
-| v8     | Generic Javascript v8 Engine (Nodejs Environment) | yes                                 | yes                                                             | yes                                                            |
-| eslint | Linting of the PAC File                           | yes                                 | no                                                              | no                                                             |
-| winhttp | WinHTTP evaluation of the PAC                    | yes                                 | yes                                                             | no                                                             | 
+| Name    | Description                                       | Validation<br>(Is the Syntax valid) | Evaluation<br>(Simulate a PAC evaluation for a given dest host) | SRC_IP<br>(simulate a specific source ip for a pac resolution) |
+|---------|---------------------------------------------------|-------------------------------------|-----------------------------------------------------------------|----------------------------------------------------------------|
+| v8      | Generic Javascript v8 Engine (Nodejs Environment) | yes                                 | yes                                                             | yes                                                            |
+| eslint  | Linting of the PAC File                           | yes                                 | no                                                              | no                                                             |
+| winhttp | WinHTTP evaluation of the PAC                     | yes                                 | yes                                                             | no                                                             | 

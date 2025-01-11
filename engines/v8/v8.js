@@ -87,7 +87,7 @@ const evalPac = (pacContent, testHost, src_ip) => {
         let ctx = vm.createContext(Object.assign({}, predefinedFuncs));
         vm.runInContext(pacContent, ctx);
         if (typeof ctx.FindProxyForURL !== 'function') {
-            throw new Error('FindProxyForURL is not defined');
+            throw new Error('FindProxyForURL is not defined in PAC');
         }
 
         vm.runInContext(build_cmd(testHost), ctx);

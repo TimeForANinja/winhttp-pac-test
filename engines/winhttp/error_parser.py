@@ -1,4 +1,4 @@
-def parseWinHTTPError(funcName: str, error_id: int) -> dict:
+def parse_winhttp_error(func_name: str, error_id: int) -> dict:
     # https://learn.microsoft.com/en-us/windows/win32/winhttp/error-messages
     if error_id == 12167:
         title = 'ERROR_WINHTTP_UNABLE_TO_DOWNLOAD_SCRIPT'
@@ -150,7 +150,7 @@ def parseWinHTTPError(funcName: str, error_id: int) -> dict:
 
     return {
         'status': 'failed',
-        'function': funcName,
+        'function': func_name,
         'error_code': error_id,
         'error': title,
         'message': message,
