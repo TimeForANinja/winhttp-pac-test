@@ -13,8 +13,8 @@ engines = [
     # for some reason using localhost adds nearly 2 seconds to the request time...
     # so make sure to stick with 127.0.0.1...
     # https://stackoverflow.com/a/50565643
-    {"name": "v8", "url": "http://127.0.0.1:8081/", "flags": [FLAG_EVALUATION, FLAG_VALIDATION, FLAG_SRC_IP]},
-    {"name": "winhttp", "url": "http://127.0.0.1:8082/", "flags": [FLAG_EVALUATION, FLAG_VALIDATION]},
+    {"name": "v8", "url": "http://127.0.0.1:8081/", "flags": [FLAG_EVALUATION, FLAG_SRC_IP]},
+    {"name": "winhttp", "url": "http://127.0.0.1:8082/", "flags": [FLAG_EVALUATION]},
     {"name": "eslint", "url": "http://127.0.0.1:8083/", "flags": [FLAG_VALIDATION]},
 ]
 

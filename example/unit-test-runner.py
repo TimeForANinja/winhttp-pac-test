@@ -19,12 +19,10 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler(log_file),
+        logging.FileHandler(log_file, "w", "utf-8"),
         logging.StreamHandler(),  # Log to stdout
     ]
 )
-logging.info("Test Execution Log")
-logging.info("==================")
 
 # Initialize failure count
 failed_tests = 0
@@ -59,7 +57,11 @@ available_files = [
     in glob.glob(os.path.join(pacs_dir, "**", "*"), recursive=True)
     if os.path.isfile(f)
 ]
+
+# log header
+logging.info("Test Execution Log")
 logging.info(f"Found the following Assets: (test-csv-files= {len(csv_files)}, pac-files={len(available_files)})")
+logging.info("==================")
 
 # Helper function to match files with wildcard
 def find_matching_files(pattern):
@@ -72,17 +74,17 @@ for csv_file in csv_files:
     df["source_file"] = os.path.relpath(os.path.abspath(csv_file), os.path.abspath(tests_dir))
     df["required_flags"] = df["required_flags"].fillna("")
     test_cases = df.to_dict("records")
-    logging.info(f"= Running tests for file '{csv_file}'")
+    logging.info(f"= csv file '{csv_file}'")
 
     # Execute tests
     for test in test_cases:
-        logging.info(f"== Running test-case {int(test['id']):03d} / {len(test_cases):03d}: '{test['description']}'")
+        logging.info(f"== test-case {int(test['id']):03d}/{len(test_cases):03d}: '{test['description']}'")
         try:
             file_pattern = test["file"]
             matching_files = find_matching_files(file_pattern)
 
             for file_path in matching_files:
-                logging.info(f"=== Running test-case on {file_path}")
+                logging.info(f"=== pac file {file_path}")
                 with open(os.path.join(pacs_dir, file_path), "r") as file:
                     file_content = file.read()
 
@@ -98,31 +100,30 @@ for csv_file in csv_files:
                 response_json = response.json()
 
                 if response.status_code != 200 or response_json.get("status") != "success":
-                    logging.error(f"    FAIL: Request for file '{file_path}' failed. Response: {json.dumps(response_json)}")
+                    logging.error(f"    ❌FAIL: Request for file '{file_path}' failed. Response: {json.dumps(response_json)}")
                     failed_tests += 1
                 else:
                     results = response_json.get("results", [])
                     for result in results:
-                        logging.info(f"==== Engine '{result['engine']}'")
                         if test['required_flags'] != "" and test['required_flags'] not in result.get('flags', []):
-                            logging.info(f"     SKIPPED: Missing flags")
+                            logging.info(f"    ❔SKIPPED (engine '{result['engine']}'): Missing flags")
                             # skip engine if it does not support the feature we need
                             continue
 
                         if result.get("status") != "success":
-                            logging.error(f"     FAIL: Engine reported problems. error {result['error_code']}: {result['error']}.\n{result['message']}\nFull Response: {json.dumps(result)}")
+                            logging.error(f"    ❌FAIL (engine '{result['engine']}'): Engine reported problems. error {result['error_code']}: {result['error']}.\n{result['message']}\nFull Response: {json.dumps(result)}")
                             failed_tests += 1
                             continue
 
                         if 'evaluation' in result.get('flags', []):
                             # if evaluation is supported we check roxy resulting from the evaluation
                             if test['expected_output'] != result['proxy']:
-                                logging.error(f"     FAIL: Invalid Proxy. Expected: {test['expected_output']}, Actual: {result['proxy']}")
+                                logging.error(f"    ❌FAIL (engine '{result['engine']}'): Invalid Proxy. Expected: {test['expected_output']}, Actual: {result['proxy']}")
                                 failed_tests += 1
                                 continue
 
                         # no check failed, so we pass
-                        logging.info(f"      PASS: Test succeeded.")
+                        logging.info(f"    ✅PASS (engine '{result['engine']}'): Test succeeded.")
 
         except Exception as e:
             logging.error(f"   ERROR: Exception during tests. Error: {str(e)}")
