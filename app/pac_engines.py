@@ -49,10 +49,14 @@ def process_engine(engine: dict, engine_payload: dict) -> EngineResult:
         )
 
         if res.status_code == 200:
+            res_json = res.json()
             return EngineResult(
                 engine=engine_name,
-                status="success",
-                proxy=res.json().get("proxy", "<undefined>"),
+                status=res_json.get("status", "failed"),
+                proxy=res_json.get("proxy", "<undefined>"),
+                error=res_json.get("error", None),
+                error_code=res_json.get("error_code", 0),
+                message=res_json.get("message", None),
                 flags=engine_flags,
             )
         else:
