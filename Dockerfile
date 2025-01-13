@@ -12,7 +12,7 @@ ENV WINEPREFIX=/pac-test/.wine/
 RUN apt-get update
 RUN apt-get install -y curl sudo python3 python3-pip python3-venv
 # Dependencies for winhttp - wine 32bit and xvfb as fake display
-RUN apt-get install -y wine32 \
+RUN apt-get install -y wine32 winetricks \
     xorg xvfb x11-utils xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic
 # Dependencies for v8 - nodejs
 RUN curl -sL https://deb.nodesource.com/setup_22.x | sudo -E bash -
@@ -36,6 +36,9 @@ RUN cd /pac-test/engines/eslint && npm install
 # prep winhttp - install python
 # yes, the sleep at the end is essential...
 RUN xvfb-run wine engines/winhttp/python-3.12.8.exe /quiet PrependPath=1 InstallAllUsers=1 && sleep 10
+# overwrite wine dll's with windows native
+# some features (e.g. convert_addr) are part of the wine reverse engineered dll but not of the og windows dll
+RUN winetricks winhttp wininet
 # prep core server - install python dependencies
 RUN python3 -m venv venv && \
     . venv/bin/activate && \
