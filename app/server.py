@@ -1,6 +1,4 @@
-# todo: import and use loguru.logger
-
-# create app
+# create flask app
 from apiflask import APIFlask
 app = APIFlask(__name__, "PAC Test Server", version="1.0.0", docs_path="/docs")
 
@@ -12,7 +10,7 @@ register_pac_routes(app)
 from routes.eval import register_eval_routes
 register_eval_routes(app)
 
-# add "status" and "status_code" fields to the default error
+# add "status" and "status_code" fields to the default flask errors
 @app.error_processor
 def handle_error(error):
     return {
@@ -24,4 +22,5 @@ def handle_error(error):
 
 
 if __name__ == '__main__':
+    # start flask app server
     app.run(port=8080, host="0.0.0.0")

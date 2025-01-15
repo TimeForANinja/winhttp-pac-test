@@ -14,20 +14,22 @@ from validators.url import IPValidator, HostnameValidator
 
 @dataclass
 class EvalInput:
+    """Basic Information (except PAC) required for evaluating a PAC."""
     dest_host: str = field(metadata={
         "required": True,
-        "validate": HostnameValidator('"dest_host" must be a valid URL'),
+        "validate": HostnameValidator('"dest_host" must be a fqdn'),
         "description": "The destination host URL",
     })
     src_ip: str = field(metadata={
         "required": True,
-        "validate": IPValidator('"src_ip" must be a valid URL'),
+        "validate": IPValidator('"src_ip" must be a valid IP'),
         "description": "The source IP URL",
     })
 
 
 @dataclass
 class EvalWithPacInput(EvalInput):
+    """Full Input including PAC Content for evaluation by the Engines."""
     content: str = field(metadata={
         "required": True,
         "validate": Length(min=1),
@@ -37,7 +39,7 @@ class EvalWithPacInput(EvalInput):
 
 def register_eval_routes(app: APIFlask):
     @app.post('/api/v1/eval')
-    @app.doc(tags=['Eval'], summary='Evaluate PAC', description='Evaluate a PAC')
+    @app.doc(tags=['Eval'], summary='Evaluate PAC', description='Evaluate a PAC, providing the PAC content.')
     @app.input(EvalWithPacInput.Schema, location='json', arg_name="eval_data")
     @app.output(EvalResponse.Schema)
     def r_evaluate_after_adding_pac_function(eval_data: EvalWithPacInput):
@@ -50,7 +52,7 @@ def register_eval_routes(app: APIFlask):
 
 
     @app.post('/api/v1/eval/<string:uid>')
-    @app.doc(tags=['Eval'], summary='Evaluate PAC by UID', description='Evaluate a PAC by UID')
+    @app.doc(tags=['Eval'], summary='Evaluate PAC by UID', description='Evaluate a PAC, referencing it by UID')
     @app.input(PACId.Schema, location='path', arg_name="pid")
     @app.input(EvalInput.Schema, location='json', arg_name="eval_data")
     @app.output(EvalResponse.Schema)

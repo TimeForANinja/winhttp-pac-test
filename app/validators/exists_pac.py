@@ -6,6 +6,7 @@ from pac_storage import has_pac
 
 
 class ExistsPACValidator(Validator):
+    """Validator to check if a PAC exists in the in-memory storage."""
     def __init__(self, message=None):
         if message is None:
             message = "The specified resource does not exist."

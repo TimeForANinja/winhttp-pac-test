@@ -6,6 +6,7 @@ from marshmallow_dataclass import dataclass
 
 @dataclass
 class ShortPac:
+    """Class representing everything except the PAC content. Used when Listing PACs."""
     uid: str = field(metadata={"description": "Unique identifier for the PAC"})
     added_time: float = field(metadata={"description": "Timestamp when the PAC was added"})
 

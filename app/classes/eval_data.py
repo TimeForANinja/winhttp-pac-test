@@ -10,6 +10,7 @@ from classes.pac import PAC
 
 @dataclass
 class EvalData:
+    """Object to hold all the data required for a pac evaluation request"""
     pac: PAC
     dest_host: str
     src_ip: str
@@ -39,6 +40,7 @@ class EvalData:
 
 @dataclass
 class EngineResult:
+    """Object to hold the results of a single pac engine evaluation"""
     engine: str
     status: str = field(metadata={
         "required": True,
@@ -61,6 +63,7 @@ class EngineResult:
 
 @dataclass
 class EvalResponse:
+    """Object to hold bundled results of pac evaluation requests, which gets returned to the client"""
     request: EvalData
     status: str = field(default="success")
     results: List[EngineResult] = field(default_factory=list)

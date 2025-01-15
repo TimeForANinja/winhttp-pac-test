@@ -4,6 +4,7 @@ import requests
 # imports from other parts of this app
 from classes.eval_data import EvalData, EvalResponse, EngineResult
 
+# Flags available for Engines
 FLAG_EVALUATION = "evaluation"
 FLAG_VALIDATION = "validation"
 FLAG_SRC_IP = "src_ip"
@@ -20,6 +21,9 @@ engines = [
 
 
 def call_engines(data: EvalData) -> EvalResponse:
+    """This function handles sending the requests to the engines.
+    To improve the performance, the requests are done in Parallel.
+    Responses are then bundled into a single EvalResponse for future use."""
     eval_resp = EvalResponse(data)
 
     # According to ChatGPT, this does the requests to the engines in parallel
@@ -38,10 +42,14 @@ def call_engines(data: EvalData) -> EvalResponse:
 
 
 def process_engine(engine: dict, engine_payload: dict) -> EngineResult:
+    """Send a single request to a single engine."""
+
+    # additional data added to all engine results
     engine_name = engine["name"]
     engine_flags = engine.get("flags", [])
 
     try:
+        # do request
         res = requests.post(
             engine["url"],
             json=engine_payload,
@@ -49,6 +57,9 @@ def process_engine(engine: dict, engine_payload: dict) -> EngineResult:
         )
 
         if res.status_code == 200:
+            # request "successfully"
+            # this only means that the engine managed to evaluate the pac
+            # not that the PAC passed all checks
             res_json = res.json()
             return EngineResult(
                 engine=engine_name,
@@ -61,16 +72,18 @@ def process_engine(engine: dict, engine_payload: dict) -> EngineResult:
             )
         else:
             try:
+                # request failed, but we might have a json error in the body
                 body=res.json()
                 return EngineResult(
                     engine=engine_name,
                     status="failed",
-                    error=body.get("error", ""), # "Unknown Error"),
+                    error=body.get("error", ""),
                     error_code=body.get("error_code", 1),
                     message=body.get("message", "No Message"),
                     flags=engine_flags
                 )
             except ValueError:
+                # the request body is not a json, so we can't gain any additional error info
                 return EngineResult(
                     engine=engine_name,
                     status="failed",
@@ -80,6 +93,7 @@ def process_engine(engine: dict, engine_payload: dict) -> EngineResult:
                     flags=engine_flags
                 )
     except requests.exceptions.Timeout:
+        # Engine unavailable
         return EngineResult(
             engine=engine_name,
             status="failed",
@@ -88,6 +102,7 @@ def process_engine(engine: dict, engine_payload: dict) -> EngineResult:
             flags=engine_flags
         )
     except requests.exceptions.RequestException as e:
+        # A different, unexpected Error happend
         return EngineResult(
             engine=engine_name,
             status="failed",

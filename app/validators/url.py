@@ -8,6 +8,7 @@ ip_regex = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')
 hostname_regex = re.compile(r'^(?!:\/\/)([a-zA-Z0-9.-]{1,253})\.([a-zA-Z]{2,63})$')
 
 class URLValidator(Validator):
+    """Validator to check if a string is a valid URL."""
     def __init__(self, message=None):
         if message is None:
             message = "The string is not a valid URL."
@@ -25,6 +26,7 @@ class URLValidator(Validator):
 
 
 class IPValidator(Validator):
+    """Validator to check if a string is a valid IP address (IPv4)."""
     def __init__(self, message=None):
         if message is None:
             message = "The string is not a valid IP."
@@ -37,6 +39,7 @@ class IPValidator(Validator):
 
 
 class HostnameValidator(Validator):
+    """Validator to check if a string is a valid Hostname or IP Address."""
     def __init__(self, message=None):
         if message is None:
             message = "The string is not a valid Hostname."

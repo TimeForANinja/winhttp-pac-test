@@ -1,3 +1,6 @@
+"""This File contains all Utility to implement and Interact with a simple, in-memory PAC-Store.
+The Store consists of a ring-buffer that holds the last 1000 PACs, referenced by Unique ID."""
+
 import collections
 
 # imports from other parts of this app
