@@ -7,7 +7,6 @@ import collections
 from classes.pac import PAC, ShortPac
 
 pac_store = collections.deque(maxlen=1000)
-pac_store.append(PAC("1337", "test-pac", 0))
 
 
 def has_pac(uid: str) -> bool:

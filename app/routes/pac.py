@@ -8,6 +8,7 @@ from marshmallow_dataclass import dataclass
 from classes.pac import PAC, ShortPac
 from pac_storage import has_pac, list_pac, add_pac, get_pac
 from routes.schemas.pac_uid import PACId
+from routes.schemas.generic_output import GenericOutput
 
 
 @dataclass
@@ -20,10 +21,6 @@ class InputCreatePAC:
             "description": "The content of the PAC"
         }
     )
-
-class GenericOutput(Schema):
-    status = String(required=True, validate=OneOf(["success", "failed"]),
-                    metadata={"description": "Status of the response, e.g., 'success'"})
 
 class PacListOutput(GenericOutput):
     """Output for listing all PACs."""
