@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAC Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+        }
+        .input-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .big-input, .small-input {
+            margin: 10px 0;
+            width: 90%;
+            max-width: 600px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-size: 16px;
+            padding: 10px;
+            font-family: monospace;
+        }
+        input.small-input {
+            width: calc(50% - 10px);
+            margin: 0 5px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .small-inputs-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        button {
+            margin: 20px 0;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .codebox {
+            width: 90%;
+            max-width: 600px;
+            height: 200px;
+            margin: 20px auto;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            font-size: 14px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .readonly {
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>PAC Tester</h1>
+    <p style="text-align: center; margin-top: -10px;">
+        <a href="/docs" target="_blank" style="text-decoration: none; color: blue;">Read the docs</a>
+    </p>
+    <div class="input-container">
+        <!-- Big Input for programming code -->
+        <div class="big-input">
+            <textarea placeholder="Enter programming code here"></textarea>
+        </div>
+
+        <!-- Small inputs for hostname and source -->
+        <div class="small-inputs-container">
+            <label for="hostname">Hostname</label>
+            <input type="text" id="hostname" class="small-input" placeholder="hostname">
+            <label for="source">Source</label>
+            <input type="text" id="source" class="small-input" placeholder="source">
+        </div>
+        <!-- Submit button -->
+        <button type="button" id="submit-btn">Submit</button>
+
+        <!-- Output code box -->
+        <div class="codebox readonly" id="output">
+            <!-- Output text will appear here -->
+        </div>
+    </div>
+    <script>
+        // default content for the center pac field
+        document.querySelector('.big-input textarea').textContent = '// eslint-disable-next-line no-unused-vars\n' +
+            'function FindProxyForURL(url, host)\n' +
+            '{\n' +
+            '\tif (dnsDomainIs(host, \'.example.com\'))\n' +
+            '\t{\n' +
+            '\t\treturn \'PROXY proxy.example.com:8080;\';\n' +
+            '\t}\n' +
+            '\treturn \'DIRECT\';\n' +
+            '}\n';
+        // Send to Backend when Submit is pressed
+        document.getElementById('submit-btn').addEventListener('click', eval_pac);
+        // consider enter as submit
+        document.querySelector('.small-inputs-container input:nth-child(2)').addEventListener('keydown', handleEnterSubmit);
+        document.querySelector('.small-inputs-container input:nth-child(4)').addEventListener('keydown', handleEnterSubmit);
+
+        const { c_success, c_failed } = {
+            c_success: '#555',
+            c_failed: '#d9534f',
+        }
+
+        async function eval_pac() {
+            // get refs to fields
+            const textarea = document.querySelector('.big-input textarea');
+            const hostnameInput = document.querySelector('.small-inputs-container input:nth-child(2)');
+            const sourceInput = document.querySelector('.small-inputs-container input:nth-child(4)');
+            const outputBox = document.getElementById('output');
+
+            // read inputs
+            const pacContent = textarea.value;
+            const hostname = hostnameInput.value.trim();
+            const source = sourceInput.value.trim();
+
+            // check that all inputs are provided
+            if (!pacContent || !hostname || !source) {
+                outputBox.textContent = 'Error: All fields are required!';
+                outputBox.style.color = c_failed;
+                return;
+            }
+
+            try {
+                // send to backend
+                const response = await fetch('/api/v1/eval', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: pacContent,
+                        dest_host: hostname,
+                        src_ip: source
+                    })
+                });
+
+                // 422 means apiflask failed the validation of the request body
+                if (response.status === 422) {
+                    const errorDetails = await response.json();
+                    const fields = errorDetails.detail.json;
+                    let errorMessage = `Validation failed (Status: 422)\nStatus: ${errorDetails.status}\nMessage: ${errorDetails.message}\nDetails:\n`;
+                    for (const key in fields) {
+                        errorMessage += `Field='${key}' Error='${fields[key]}'\n`;
+                    }
+                    outputBox.textContent = errorMessage;
+                    outputBox.style.color = c_failed;
+                    return;
+                }
+
+                // not ok means non-200 status code
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status} - ${response.statusText}`);
+                }
+
+                // Success, reformat and print the Body from the API
+                const reply = await response.json();
+                const engines = reply.results;
+                let responseString = `Request succesful (Status: 200)\nStatus: ${engines.filter(x => x.status === "success").length} / ${engines.length} Engines passed\nDetails:\n`;
+                for (const engine of engines) {
+                    responseString += `\t${engine.status === 'success' ? '✅' : '❌'} Engine='${engine.engine}'${' '.repeat(8 - engine.engine.length)} Proxy='${engine.proxy}'\n`;
+                    if (engine.message) {
+                        // Messages are only present when the Engine failed, and include details about the Error
+                        responseString += engine.message.split('\n').map(x => `\t\t${x}`).join('\n') + "\n";
+                    }
+                }
+                outputBox.textContent = responseString;
+                outputBox.style.color = c_success;
+            } catch (error) {
+                outputBox.textContent = error.message;
+                outputBox.style.color = c_failed;
+            }
+        }
+
+        function handleEnterSubmit(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                eval_pac();
+            }
+        }
+    </script>
+</body>
+</html>
