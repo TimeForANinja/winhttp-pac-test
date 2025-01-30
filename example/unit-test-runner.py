@@ -1,5 +1,6 @@
 import os
 import glob
+import csv
 import pandas as pd
 import requests
 import json
@@ -27,7 +28,7 @@ logging.basicConfig(
 # Initialize failure count
 failed_tests = 0
 
-# util function to check if csv is as expected
+
 required_columns = {"id", "description", "file", "dest_host", "src_ip", "expected_output", "required_flags"}
 def validate_csv_columns(df):
     """
@@ -60,12 +61,34 @@ logging.info("Test Execution Log")
 logging.info(f"Found the following Assets: (test-csv-files= {len(csv_files)}, pac-files={len(available_files)})")
 logging.info("==================")
 
+
+def detect_csv_delimiter(file_path: str) -> str:
+    """
+    Detect the delimiter used in a CSV file.
+
+    :param file_path: Path to the CSV file.
+    :return: The detected delimiter as a string.
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        # Read a sample of the file
+        sample = f.read(1024)
+        try:
+            # Automatically detect the dialect
+            dialect = csv.Sniffer().sniff(sample)
+            return dialect.delimiter
+        except csv.Error:
+            # Fallback to the default delimiter (comma) if detection fails
+            return ','
+
+
 # Helper function to match files with wildcard
 def find_matching_files(pattern):
     return [f for f in available_files if fnmatch(f, pattern)]
 
+
 for csv_file in csv_files:
-    df = pd.read_csv(csv_file)
+    detected_delimiter = detect_csv_delimiter(csv_file)
+    df = pd.read_csv(csv_file, delimiter=detected_delimiter)
     if not validate_csv_columns(df):
         continue
     df["source_file"] = os.path.relpath(os.path.abspath(csv_file), os.path.abspath(tests_dir))
@@ -125,6 +148,7 @@ for csv_file in csv_files:
         except Exception as e:
             logging.error(f"   ERROR: Exception during tests. Error: {str(e)}")
             failed_tests += 1
+
 
 # Exit with failure count as the status code
 exit(failed_tests)
