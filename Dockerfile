@@ -47,9 +47,11 @@ RUN python3 -m venv venv && \
 # Define health check using the script
 COPY healthcheck.sh /pac-test/healthcheck.sh
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 CMD /pac-test/healthcheck.sh
+RUN chmod +x /pac-test/healthcheck.sh
 
 # Copy missing runtime files
 COPY entrypoint.sh /pac-test/
+RUN chmod +x /pac-test/entrypoint.sh
 
 # Run the entrypoint which starts the python server using wine
 EXPOSE 8080
