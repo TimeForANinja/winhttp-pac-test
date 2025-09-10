@@ -95,16 +95,17 @@ const evalPac = (pacContent, testHost, src_ip) => {
         // post-process returned proxy
         let proxy = []
         if (ctx.test && typeof ctx.test === 'string') {
-            const parts = ctx.test.split(';');
-            for (const part of parts) {
+            const parts = ctx.test.trim().split(';');
+            for (let part of parts) {
+                part = part.trim();
                 if (part === "DIRECT") {
                     proxy.push("DIRECT");
                 } else if (part.startsWith('PROXY ')) {
-                    proxy.push(part.substr(6));
+                    proxy.push(part.substring(6));
                 } else if (part === "") {
                     // do nothing / skip
                 } else{
-                    return proxy.push(part);
+                    proxy.push(part);
                 }
             }
         } else {
