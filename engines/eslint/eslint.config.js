@@ -8,7 +8,7 @@ const general_rules = {
     '@stylistic/js/quotes': ['error', 'single'],
     '@stylistic/js/linebreak-style': ['error', 'unix'],
     '@stylistic/js/semi': 'error',
-    '@stylistic/js/indent': ['error', 'tab'],
+    '@stylistic/js/indent': ['error', 4], // the alternative would be 'tab'
     '@stylistic/js/brace-style': ['error', '1tbs'],
     '@stylistic/js/operator-linebreak': ['error', 'before'],
     '@stylistic/js/max-len': ['error', { code: 100, comments: 200 }],
