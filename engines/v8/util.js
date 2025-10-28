@@ -17,7 +17,7 @@ const predefinedFuncs = {
         return result;
     },
     isValidIpAddress: (ipchars) => {
-        var matches = ipchars.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/).exec(ipchars);
+        var matches = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ipchars);
         if (matches === null) {
             return false;
         } else if (matches[1] > 255 || matches[2] > 255 || matches[3] > 255 || matches[4] > 255) {
@@ -26,18 +26,18 @@ const predefinedFuncs = {
         return true;
     },
     isInNet: (ipaddr, pattern, maskstr) => {
-        if (!isValidIpAddress(pattern) || !isValidIpAddress(maskstr)) {
+        if (!predefinedFuncs.isValidIpAddress(pattern) || !predefinedFuncs.isValidIpAddress(maskstr)) {
             return false;
         }
-        if (!isValidIpAddress(ipaddr)) {
-            ipaddr = dnsResolve(ipaddr);
+        if (!predefinedFuncs.isValidIpAddress(ipaddr)) {
+            ipaddr = predefinedFuncs.dnsResolve(ipaddr);
             if (ipaddr == null) {
                 return false;
             }
         }
-        var host = convert_addr(ipaddr);
-        var pat = convert_addr(pattern);
-        var mask = convert_addr(maskstr);
+        var host = predefinedFuncs.convert_addr(ipaddr);
+        var pat = predefinedFuncs.convert_addr(pattern);
+        var mask = predefinedFuncs.convert_addr(maskstr);
         return (host & mask) == (pat & mask);
     },
     isPlainHostName: (host) => {

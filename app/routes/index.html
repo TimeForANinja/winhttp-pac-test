@@ -98,11 +98,11 @@
         document.querySelector('.big-input textarea').textContent = '// eslint-disable-next-line no-unused-vars\n' +
             'function FindProxyForURL(url, host)\n' +
             '{\n' +
-            '\tif (dnsDomainIs(host, \'.example.com\'))\n' +
-            '\t{\n' +
-            '\t\treturn \'PROXY proxy.example.com:8080;\';\n' +
-            '\t}\n' +
-            '\treturn \'DIRECT\';\n' +
+            '    if (dnsDomainIs(host, \'.example.com\'))\n' +
+            '    {\n' +
+            '        return \'PROXY proxy.example.com:8080;\';\n' +
+            '    }\n' +
+            '    return \'DIRECT\';\n' +
             '}\n';
         // Send to Backend when Submit is pressed
         document.getElementById('submit-btn').addEventListener('click', eval_pac);
