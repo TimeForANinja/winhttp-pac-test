@@ -35,6 +35,8 @@ def register_pac_routes(app: APIFlask):
     @app.doc(tags=['PAC'], summary='List all PACs', description='List all PACs in the database')
     @app.output(PacListOutput)
     def r_list_all_pacs():
+        if app.config.get('DISABLE_LIST', 'false').lower() == 'true':
+            return abort(400, "List-Endpoint is disabled")
         return {"status": "success", "pacs": list_pac()}
 
     @app.get('/api/v1/pac/<string:uid>')

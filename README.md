@@ -28,7 +28,16 @@ The easiest deployment is via Docker. Simply run the following:
    ```
    docker run -p 8080:8080 winhttp-pac-test
    ```
-   
+
+## Environment Variables
+The following Environment Variables can be set to configure the Server:
+
+| Variable           | Default | Description                                                     |
+|--------------------|---------|-----------------------------------------------------------------|
+| `APP_DISABLE_LIST` | `false` | Set to `true` to disable the `/api/v1/pac` Endpoint for privacy |
+| `APP_PROXY_FIX`    | `false` | Set to `true` to fix source IP when behind a Proxy              |
+| `APP_MAX_CACHE`    | `1000`  | Maximum number of PAC files to keep in cache                    |
+
 # Individual / Dev Setup
 If you want to do development, or are unable to use the Docker build, you can run this Service as described below.
 1) start the core server 

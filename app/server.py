@@ -1,6 +1,7 @@
 from apiflask import APIFlask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from pac_storage import init_store
 
 # create flask app
 app = APIFlask(__name__, "PAC Test Server", version="1.0.0", docs_path="/docs")
@@ -17,6 +18,8 @@ app.config['SWAGGER_UI_STANDALONE_PRESET_JS'] = 'static/js/swagger-ui-standalone
 if app.config.get('PROXY_FIX', 'false').lower() == 'true':
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
+# init pac store
+init_store(app)
 
 # add routes
 from routes.other import register_other_routes

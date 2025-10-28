@@ -2,11 +2,17 @@
 The Store consists of a ring-buffer that holds the last 1000 PACs, referenced by Unique ID."""
 
 import collections
+from apiflask import APIFlask
 
 # imports from other parts of this app
 from classes.pac import PAC, ShortPac
 
-pac_store = collections.deque(maxlen=1000)
+
+pac_store: collections.deque[PAC] = None
+def init_store(app: APIFlask):
+    global pac_store
+    # set a max cache size based on an environment variable
+    pac_store = collections.deque(maxlen=app.config.get('MAX_CACHE', 1000))
 
 
 def has_pac(uid: str) -> bool:
