@@ -29,6 +29,9 @@ WORKDIR /pac-test
 COPY engines/ /pac-test/engines/
 COPY app /pac-test/app/
 
+# allow for custom npmrc (e.g. artifactory)
+COPY .npmrc /root/.npmrc
+
 # prep v8 - install nodejs dependencies
 RUN cd /pac-test/engines/v8 && npm install
 # prep eslint - install nodejs dependencies
